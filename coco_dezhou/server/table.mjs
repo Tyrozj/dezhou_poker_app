@@ -67,6 +67,10 @@ export class GameTable {
     this.handStartedAt = 0;
     this.handEndedAt = 0;
     this.lastPot = 0;
+    this.history = [];
+    this.maxHistory = 60;
+    this.handsRecorded = 0;
+    this.lastRecord = null;
     this.handsPlayed = 0;
   }
 
@@ -98,6 +102,8 @@ export class GameTable {
       pid,
       name,
       chips: this.settings.startChips,
+      buyIn: this.settings.startChips, // 累计买入（含补码），用于算净输赢
+      chipsAtHandStart: this.settings.startChips,
       bet: 0,
       committed: 0,
       cards: null,
@@ -169,6 +175,7 @@ export class GameTable {
     }
     const amount = this.settings.rebuyAmount || this.settings.startChips;
     this.seats[idx].chips += amount;
+    this.seats[idx].buyIn += amount;
     this.seats[idx].sitOut = false;
     this._log({ t: 'rebuy', seat: idx, name: this.seats[idx].name, amount });
     this._touch('补码');
@@ -199,7 +206,10 @@ export class GameTable {
     // 自动补码
     if (this.settings.autoRebuy) {
       for (const s of this.seats) {
-        if (s && s.chips <= 0 && !s.sitOut) s.chips = this.settings.startChips;
+        if (s && s.chips <= 0 && !s.sitOut) {
+          s.chips = this.settings.startChips;
+          s.buyIn += this.settings.startChips;
+        }
       }
     }
 
@@ -229,6 +239,7 @@ export class GameTable {
       s.actedSinceFullRaise = false;
       s.lastAction = '';
       s.lastWin = 0;
+      s.chipsAtHandStart = s.chips; // 记录本手开始前的余额，摊牌后算输赢
       s.inHand = eligible.includes(this.seats.indexOf(s));
     }
 
@@ -656,8 +667,76 @@ export class GameTable {
         this._log({ t: 'busted', seat: this.seats.indexOf(s), name: s.name });
       }
     }
+    this._recordHand();
     this.handEndedAt = this.now();
     this._touch('一手结束');
+  }
+
+  /** 记录这一手：每个人本手开始/结束的筹码与输赢，供房间内「对局记录」查看。 */
+  _recordHand() {
+    const players = [];
+    this.seats.forEach((s, i) => {
+      if (!s || !s.inHand) return;
+      const before = typeof s.chipsAtHandStart === 'number' ? s.chipsAtHandStart : s.chips;
+      players.push({
+        seat: i,
+        name: s.name,
+        before,
+        after: s.chips,
+        delta: s.chips - before,
+        committed: s.committed,
+        folded: s.folded,
+      });
+    });
+    const record = {
+      handNo: this.handNo,
+      at: this.handStartedAt,
+      dealerSeat: this.dealerSeat,
+      board: this.board.slice(),
+      pot: this.lastPot,
+      showdown: !!(this.results && this.results.showdown),
+      awards: (this.results && this.results.awards ? this.results.awards : []).map((a) => ({
+        seat: a.seat,
+        name: a.name,
+        amount: a.amount,
+        handName: a.handName || '',
+      })),
+      players,
+    };
+    this.history.push(record);
+    if (this.history.length > this.maxHistory) this.history.splice(0, this.history.length - this.maxHistory);
+    this.handsRecorded += 1;
+    this.lastRecord = record;
+    return record;
+  }
+
+  /** 对局记录：最近的手牌流水 + 每位玩家的买入/当前/净输赢。 */
+  handHistory(limit = 30) {
+    const players = [];
+    const liveHand = this.phase === 'betting';
+    this.seats.forEach((s, i) => {
+      if (!s) return;
+      // 牌局进行中，已投入底池的筹码还没结算回来：算进"当前"才不会让账对不上
+      const inPlay = liveHand && s.inHand ? s.committed : 0;
+      const chips = s.chips + inPlay;
+      players.push({
+        seat: i,
+        name: s.name,
+        buyIn: s.buyIn,
+        chips,
+        inPlay,
+        delta: chips - s.buyIn,
+        sitOut: s.sitOut,
+        inHandNow: liveHand && s.inHand,
+      });
+    });
+    return {
+      hands: this.history.slice(-limit),
+      players,
+      totalHands: this.handsRecorded,
+      currentHandNo: this.handNo,
+      inPlay: liveHand,
+    };
   }
 
   /* ---------------- 视图 ---------------- */

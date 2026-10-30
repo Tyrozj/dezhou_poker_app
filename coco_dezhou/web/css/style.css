@@ -739,6 +739,85 @@ input[type=range].raise-range::-webkit-slider-thumb {
 .log-list .lg.win { color: var(--gold); }
 .log-list .lg.lose { color: var(--ink-3); }
 
+/* ===================== 对局记录 ===================== */
+.sheet-tall { max-height: 88dvh; }
+
+.tabs { display: flex; gap: 8px; margin: 0 0 12px; }
+.tab {
+  flex: 1;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.tab.is-active {
+  background: rgba(232, 196, 121, 0.16);
+  border-color: rgba(232, 196, 121, 0.45);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.hist-body { display: flex; flex-direction: column; gap: 8px; padding-bottom: 6px; }
+.hist-summary { font-size: 11.5px; color: var(--ink-3); padding: 0 2px; }
+.hist-note { font-size: 11.5px; color: var(--gold-2); padding: 0 2px; line-height: 1.5; }
+
+.hist-hand, .hist-player {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hist-hand:active, .hist-player:active { background: rgba(255, 255, 255, 0.07); }
+.hist-hand.is-out { opacity: 0.55; }
+
+.hh-top { display: flex; align-items: center; gap: 8px; }
+.hh-no { font-size: 11.5px; color: var(--gold); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.hh-board {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hh-time { font-size: 11px; color: var(--ink-3); flex: 0 0 auto; }
+.hh-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.hh-meta .hh-winners { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-pot { color: var(--ink-3); white-space: nowrap; }
+
+.hh-detail, .hp-detail {
+  display: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  flex-direction: column;
+  gap: 6px;
+}
+.hist-hand.is-open .hh-detail, .hist-player.is-open .hp-detail { display: flex; }
+
+.hh-line { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.hp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-flow { color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.hp-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hp-delta.win { color: #5fd3a0; }
+.hp-delta.lose { color: #ff8e87; }
+.hp-delta.flat { color: var(--ink-3); }
+
+.hist-player .hp-top { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.hp-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+
 .toast {
   position: fixed;
   left: 50%;

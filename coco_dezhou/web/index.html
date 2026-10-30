@@ -198,8 +198,19 @@
     <button class="btn btn-line" id="btn-rebuy">补码</button>
     <button class="btn btn-line" id="btn-sitout">旁观 / 回座</button>
   </div>
+  <button class="btn btn-line btn-block" id="btn-history">对局记录（输赢流水）</button>
   <div class="menu-players" id="menu-players"></div>
   <button class="btn btn-danger btn-block" id="btn-quit">退出房间</button>
+</div>
+
+<div class="sheet sheet-tall" id="sheet-history">
+  <div class="sheet-grab"></div>
+  <h3>对局记录</h3>
+  <div class="tabs" id="hist-tabs">
+    <button class="tab is-active" data-tab="hands">手牌流水</button>
+    <button class="tab" data-tab="players">玩家账本</button>
+  </div>
+  <div class="hist-body" id="hist-body"></div>
 </div>
 
 <div class="sheet" id="sheet-log">

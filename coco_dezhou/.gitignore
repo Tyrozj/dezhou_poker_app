@@ -7,6 +7,9 @@ data/
 # 打包产物（Hugging Face Space 目录）
 dist/
 
+# 用于同步到 GitHub 的临时克隆
+.repo-sync/
+
 # 系统文件与日志
 .DS_Store
 Thumbs.db

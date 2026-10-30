@@ -24,6 +24,9 @@ const S = {
   boardCount: 0,
   lastHand: 0,
   lastRoomState: null,
+  history: null,
+  histTab: 'hands',
+  histOpen: new Set(),
 };
 
 const LS_NICK = 'dz.nick';
@@ -713,6 +716,10 @@ function openSheet(id) {
   $(id).classList.add('is-open');
   if (id === 'sheet-menu') renderMenu();
   if (id === 'sheet-log') renderLogSheet();
+  if (id === 'sheet-history') {
+    renderHistory();
+    net.requestHistory();
+  }
 }
 
 function closeSheets() {
@@ -760,6 +767,168 @@ function renderLogSheet() {
   if (!list.children.length) list.appendChild(el('div', 'empty', '还没有记录'));
 }
 
+/* ---------------- 对局记录（手牌流水 / 玩家账本） ---------------- */
+
+function boardText(cards) {
+  return (cards || []).map((c) => SUIT_SYMBOL[c[1]] + RANK_NAME[c[0]]).join(' ');
+}
+
+function clockOf(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function deltaClass(v) {
+  return v > 0 ? 'win' : v < 0 ? 'lose' : 'flat';
+}
+
+function signed(v) {
+  return v > 0 ? `+${fmt(v)}` : v < 0 ? `-${fmt(-v)}` : '0';
+}
+
+function renderHistory() {
+  const body = $('hist-body');
+  if (!body) return;
+  body.innerHTML = '';
+  const h = S.history;
+  if (!h) {
+    body.appendChild(el('div', 'empty', '加载中…'));
+    return;
+  }
+  for (const tab of document.querySelectorAll('#hist-tabs .tab')) {
+    tab.classList.toggle('is-active', tab.dataset.tab === S.histTab);
+  }
+  if (S.histTab === 'players') renderHistPlayers(body, h);
+  else renderHistHands(body, h);
+}
+
+function renderHistHands(body, h) {
+  const hands = (h.hands || []).slice().reverse();
+  if (!hands.length) {
+    body.appendChild(el('div', 'empty', '还没有打完的手牌，打一手就有了'));
+    return;
+  }
+  body.appendChild(
+    el('div', 'hist-summary', `已完成 ${h.totalHands || hands.length} 手 · 显示最近 ${hands.length} 手`),
+  );
+
+  for (const hand of hands) {
+    const key = `hand-${hand.handNo}`;
+    const row = el('div', 'hist-hand' + (S.histOpen.has(key) ? ' is-open' : ''));
+    const awards = hand.awards || [];
+    const winners =
+      awards
+        .map((a) => {
+          const p = (hand.players || []).find((x) => x.seat === a.seat);
+          const net = p ? p.delta : a.amount;
+          return `${escapeHtml(a.name)} ${signed(net)}${a.handName ? `（${a.handName}）` : ''}`;
+        })
+        .join('、') || '—';
+
+    row.appendChild(
+      el(
+        'div',
+        'hh-top',
+        `<span class="hh-no">#${hand.handNo}</span>
+         <span class="hh-board">${boardText(hand.board) || '未发公共牌'}</span>
+         <span class="hh-time">${clockOf(hand.at)}</span>`,
+      ),
+    );
+    row.appendChild(
+      el(
+        'div',
+        'hh-meta',
+        `<span class="hh-winners">${winners}</span>
+         <span class="hh-pot">底池 ${fmt(hand.pot)}</span>`,
+      ),
+    );
+
+    const detail = el('div', 'hh-detail');
+    const players = (hand.players || []).slice().sort((a, b) => b.delta - a.delta);
+    for (const p of players) {
+      const line = el('div', 'hh-line');
+      line.innerHTML = `<span class="hp-name">${escapeHtml(p.name)}</span>
+        <span class="hp-flow">${fmt(p.before)} → ${fmt(p.after)}</span>
+        <span class="hp-delta ${deltaClass(p.delta)}">${signed(p.delta)}</span>`;
+      detail.appendChild(line);
+    }
+    if (!players.length) detail.appendChild(el('div', 'empty', '本手无参与玩家'));
+    row.appendChild(detail);
+
+    row.addEventListener('click', () => {
+      if (S.histOpen.has(key)) S.histOpen.delete(key);
+      else S.histOpen.add(key);
+      row.classList.toggle('is-open');
+    });
+    body.appendChild(row);
+    if (!awards.length) row.classList.add('is-out');
+  }
+}
+
+function renderHistPlayers(body, h) {
+  const players = h.players || [];
+  if (!players.length) {
+    body.appendChild(el('div', 'empty', '还没有玩家'));
+    return;
+  }
+  body.appendChild(el('div', 'hist-summary', '买入 = 起始筹码 + 补码；净输赢 = 当前筹码 − 买入'));
+  if ((h.players || []).some((p) => p.inPlay > 0)) {
+    body.appendChild(el('div', 'hist-note', '本手进行中：已投入底池但尚未结算的筹码已计入"当前"'));
+  }
+
+  const hands = h.hands || [];
+  const sorted = players.slice().sort((a, b) => b.delta - a.delta);
+  for (const p of sorted) {
+    const key = `player-${p.seat}-${p.name}`;
+    const row = el('div', 'hist-player' + (S.histOpen.has(key) ? ' is-open' : ''));
+    row.appendChild(
+      el(
+        'div',
+        'hp-top',
+        `<span class="hp-name">${escapeHtml(p.name)}</span>
+         <span class="hp-delta ${deltaClass(p.delta)}">${signed(p.delta)}</span>`,
+      ),
+    );
+    row.appendChild(
+      el(
+        'div',
+        'hp-sub',
+        `买入 ${fmt(p.buyIn)}（起始 ${fmt((S.room && S.room.settings.startChips) || 0)}）· 当前 ${fmt(p.chips)}` +
+          (p.inPlay > 0 ? `（含本手 ${fmt(p.inPlay)}）` : ''),
+      ),
+    );
+
+    const detail = el('div', 'hp-detail');
+    const own = hands
+      .map((hand) => {
+        const rec = (hand.players || []).find((x) => x.seat === p.seat && x.name === p.name);
+        return rec ? { handNo: hand.handNo, delta: rec.delta, after: rec.after, at: hand.at } : null;
+      })
+      .filter(Boolean);
+    if (!own.length) detail.appendChild(el('div', 'empty', '还没有参与记录'));
+    for (const rec of own.slice().reverse()) {
+      detail.appendChild(
+        el(
+          'div',
+          'hh-line',
+          `<span class="hh-no">#${rec.handNo}</span>
+           <span class="hp-flow">${clockOf(rec.at)} · 余 ${fmt(rec.after)}</span>
+           <span class="hp-delta ${deltaClass(rec.delta)}">${signed(rec.delta)}</span>`,
+        ),
+      );
+    }
+    row.appendChild(detail);
+
+    row.addEventListener('click', () => {
+      if (S.histOpen.has(key)) S.histOpen.delete(key);
+      else S.histOpen.add(key);
+      row.classList.toggle('is-open');
+    });
+    body.appendChild(row);
+  }
+}
+
 /* ---------------- 网络事件 ---------------- */
 
 function initNet() {
@@ -777,6 +946,11 @@ function initNet() {
 
   net.on('rooms', (rooms) => {
     renderRooms(rooms);
+  });
+
+  net.on('history', (msg) => {
+    S.history = msg;
+    if ($('sheet-history').classList.contains('is-open')) renderHistory();
   });
 
   net.on('room', (msg) => {
@@ -797,6 +971,8 @@ function initNet() {
       closeSheets();
     }
     renderTable();
+    // 对局记录面板开着时，每手结束后自动刷新
+    if ($('sheet-history').classList.contains('is-open')) net.requestHistory();
   });
 
   net.on('error', (msg) => {
@@ -838,6 +1014,18 @@ function initTable() {
   $('mask').addEventListener('click', closeSheets);
   $('log-strip').addEventListener('click', () => openSheet('sheet-log'));
   $('overlay-result').addEventListener('click', () => $('overlay-result').classList.remove('is-open'));
+
+  $('btn-history').addEventListener('click', () => {
+    closeSheets();
+    openSheet('sheet-history');
+  });
+
+  $('hist-tabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    S.histTab = tab.dataset.tab;
+    renderHistory();
+  });
 
   $('btn-rebuy').addEventListener('click', () => {
     net.rebuy();

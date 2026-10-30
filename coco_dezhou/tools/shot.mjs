@@ -181,6 +181,30 @@ try {
       waitForMs: 90000,
     });
     await shoot({
+      name: 'history',
+      url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
+      waitMs: 4500,
+      preEval: `document.getElementById('overlay-result').classList.remove('is-open');`,
+      clickSel: '#btn-history',
+      afterClickMs: 1200,
+    });
+    await shoot({
+      name: 'history-players',
+      url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
+      waitMs: 4500,
+      preEval: `document.getElementById('btn-history').click(); setTimeout(function(){ var t=document.querySelector('#hist-tabs .tab[data-tab=players]'); if(t) t.click(); }, 700);`,
+      waitForSel: '#hist-body .hist-player',
+      waitForMs: 8000,
+    });
+    await shoot({
+      name: 'history-detail',
+      url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
+      waitMs: 4500,
+      preEval: `document.getElementById('btn-history').click(); setTimeout(function(){ var r=document.querySelector('#hist-body .hist-hand'); if(r) r.click(); }, 800);`,
+      waitForSel: '#hist-body .hist-hand.is-open',
+      waitForMs: 8000,
+    });
+    await shoot({
       name: 'menu',
       url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
       waitMs: 4000,

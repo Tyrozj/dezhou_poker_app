@@ -196,3 +196,41 @@ test('旁观：牌局中不能旁观，局间可以', () => {
   assert.equal(t.setSitOut('p2', true).ok, true);
   assert.equal(t.eligibleSeats().includes(1), false);
 });
+
+test('对局记录：每手输赢相加为 0，买入与净输赢可查', () => {
+  const order = ['2s', '3h', '4s', '5h', '6c', '7d', '8s', '9h', 'Tc', 'Jd', 'Qd', 'Kd', 'Ad'];
+  const t = newTable({ seats: 2, startChips: 1000, sb: 10, bb: 20 }, order);
+  t.addPlayer('p1', 'A');
+  t.addPlayer('p2', 'B');
+  t.startHand();
+  t.act('p1', { type: 'fold' });
+
+  assert.equal(t.history.length, 1, '一手结束后应有一条记录');
+  const rec = t.history[0];
+  assert.equal(rec.handNo, 1);
+  assert.equal(rec.pot, 30, 'A 的小盲 10 + B 的大盲 20');
+  assert.equal(rec.players.length, 2);
+  const sumDelta = rec.players.reduce((a, p) => a + p.delta, 0);
+  assert.equal(sumDelta, 0, '同一手内输赢总和为 0');
+  const a = rec.players.find((p) => p.name === 'A');
+  const b = rec.players.find((p) => p.name === 'B');
+  assert.equal(a.delta, -10, 'A 弃牌输掉小盲');
+  assert.equal(b.delta, 10);
+  assert.equal(a.before, 1000);
+  assert.equal(a.after, 990);
+
+  const h = t.handHistory();
+  assert.equal(h.hands.length, 1);
+  assert.equal(h.totalHands, 1);
+  const ledgerA = h.players.find((p) => p.name === 'A');
+  assert.equal(ledgerA.buyIn, 1000, '买入 = 起始筹码');
+  assert.equal(ledgerA.delta, -10, '净输赢 = 当前 - 买入');
+
+  // 补码会同时抬高买入与当前筹码，净输赢不受影响
+  t.rebuy('p1');
+  const h2 = t.handHistory();
+  const a2 = h2.players.find((p) => p.name === 'A');
+  assert.equal(a2.buyIn, 2000);
+  assert.equal(a2.chips, 1990);
+  assert.equal(a2.delta, -10);
+});

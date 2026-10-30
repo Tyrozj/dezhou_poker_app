@@ -143,6 +143,9 @@ export class Net {
       case 'rooms':
         this.emit('rooms', msg.rooms || []);
         break;
+      case 'history':
+        this.emit('history', msg);
+        break;
       case 'error':
         this.emit('error', msg);
         break;
@@ -197,4 +200,5 @@ export class Net {
   sitOut(value) { this.send({ t: 'sitout', value }); }
   kick(playerId) { this.send({ t: 'kick', playerId }); }
   chat(text) { this.send({ t: 'chat', text }); }
+  requestHistory() { this.send({ t: 'history' }); }
 }

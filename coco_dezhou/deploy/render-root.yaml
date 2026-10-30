@@ -1,0 +1,18 @@
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 给「项目放在仓库子目录」的仓库用：                            │
+# │ 把本文件内容复制到 GitHub 仓库根目录，命名为 render.yaml，    │
+# │ 然后 Render → New → Blueprint → Retry 即可。                 │
+# │ 关键就是下面这行 rootDir，告诉 Render 项目在哪个子目录。      │
+# └─────────────────────────────────────────────────────────────┘
+services:
+  - type: web
+    name: coco-dezhou
+    runtime: docker
+    plan: free
+    rootDir: coco_dezhou
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node server/index.mjs",
+    "dev": "node --watch server/index.mjs",
     "bots": "node tools/bots.mjs --create --seats 4 --count 3",
     "test": "node tests/poker.test.mjs && node tests/table.test.mjs && node tests/e2e.test.mjs",
     "test:unit": "node tests/poker.test.mjs && node tests/table.test.mjs",

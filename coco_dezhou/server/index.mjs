@@ -175,6 +175,13 @@ async function handleApi(req, res, url) {
     return json(res, 200, { room: room.summary(), table: room.table.view(null) });
   }
 
+  // GET /api/rooms/:code/history  对局记录（手牌流水 + 玩家账本，均为牌桌公开信息）
+  if (parts[1] === 'rooms' && parts[2] && parts[3] === 'history') {
+    const room = manager.get(parts[2]);
+    if (!room) return json(res, 404, { error: '房间不存在' });
+    return json(res, 200, { code: room.code, ...room.table.handHistory(50) });
+  }
+
   // GET /api/hands  战绩表
   if (parts[1] === 'hands') {
     const n = Math.min(200, Math.max(1, Number(url.searchParams.get('n') || 30)));

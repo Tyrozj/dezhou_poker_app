@@ -190,6 +190,23 @@ test('三人一桌：创建房间 / 房号加入 / 打到摊牌 / 断线重连',
   const total = final.table.seats.filter(Boolean).reduce((a, s) => a + s.chips, 0);
   assert.equal(total, 3000, '筹码总量应守恒');
 
+  // 对局记录：手牌流水 + 玩家账本
+  const mark8 = host.mark();
+  host.send({ t: 'history' });
+  const hist = await host.waitMsg((m) => m.t === 'history', 5000, mark8);
+  assert.equal(hist.hands.length, 1, '应记录 1 手');
+  assert.equal(hist.hands[0].handNo, 1);
+  assert.equal(hist.hands[0].board.length, 5);
+  assert.equal(hist.hands[0].players.length, 3);
+  assert.equal(
+    hist.hands[0].players.reduce((a, p) => a + p.delta, 0),
+    0,
+    '同一手内输赢总和为 0',
+  );
+  assert.equal(hist.players.length, 3);
+  assert.ok(hist.players.every((p) => p.buyIn === 1000), '买入都是起始筹码');
+  console.log('[e2e] 8.5 对局记录可用：', hist.hands[0].players.map((p) => `${p.name}${p.delta >= 0 ? '+' : ''}${p.delta}`).join(' '));
+
   // 断线重连：用 token 回到原座位
   const seatBefore = p2.state.you.seat;
   const tokenBefore = p2.state.you.token;

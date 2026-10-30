@@ -11,6 +11,8 @@
 | ![牌桌](docs/img/table.png) | ![加注](docs/img/raise.png) |
 | **摊牌结算** | **房间菜单** |
 | ![结算](docs/img/result.png) | ![菜单](docs/img/menu.png) |
+| **对局记录（手牌流水）** | **对局记录（玩家账本）** |
+| ![对局记录](docs/img/history.png) | ![玩家账本](docs/img/history-players.png) |
 
 ---
 
@@ -80,6 +82,7 @@ npm run bots
 - 结算：主池 + 多层边池、平分底池、奇数筹码按庄家后顺序分配、A2345 顺子、7 选 5 最佳牌型与中文牌型名
 - 每步倒计时进度条，超时自动过牌（无需跟注时）或自动弃牌
 - 摊牌自动亮牌并弹出结算；本手未参与的人等下一手
+- **对局记录**（房间 ⋯ 菜单 → 对局记录）：每手流水（公共牌、赢家、牌型、底池）可展开看每个人本手的 `剩余 → 剩余（输赢）`；「玩家账本」页显示每人的 **买入（起始筹码 + 补码）/ 当前筹码 / 净输赢**，点开可看逐手输赢明细
 - 本地实时牌力提示（"两对 K"）
 
 **数据**
@@ -104,6 +107,7 @@ coco_dezhou/
 ├─ tools/
 │  ├─ bots.mjs       机器人陪练（一个人也能开局）
 │  ├─ shot.mjs       无头 Edge 截图（开发自检）
+│  ├─ live-check.mjs 上线自检（健康检查 + REST 建房 + wss 进房）
 │  └─ make-hf-space.mjs  打包成 Hugging Face Space 目录
 ├─ Dockerfile / docker-compose.yml / render.yaml  一键部署
 ├─ tests/            牌型、引擎、端到端对局测试
@@ -111,7 +115,8 @@ coco_dezhou/
    ├─ CoCo接入方案.md  ← 与 CoCo 云房间 / 云数据表 的对接方式
    ├─ 协议.md          ← WebSocket 与 REST 接口说明
    ├─ 规则.md          ← 规则与状态机
-   └─ 部署.md          ← 内网穿透 / PaaS / 云服务器怎么上线
+   ├─ 部署.md          ← 内网穿透 / PaaS / 云服务器怎么上线
+   └─ 二次开发.md      ← 想改文案 / 配色 / 数值 / 规则时改哪个文件
 ```
 
 ---

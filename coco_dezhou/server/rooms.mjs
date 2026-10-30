@@ -288,6 +288,11 @@ export class Room extends EventEmitter {
         }
         return { ok: true };
       }
+      case 'history': {
+        // 对局记录：手牌流水 + 玩家买入/净输赢（都是牌桌上公开的信息）
+        this.send(member, { t: 'history', code: this.code, ...this.table.handHistory() });
+        return { ok: true };
+      }
       case 'kick': {
         if (member.id !== this.hostId) return this.error(member, '只有房主可以移出玩家', requestId);
         const target = this.members.get(msg.playerId);
