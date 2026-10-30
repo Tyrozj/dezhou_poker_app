@@ -1,0 +1,25 @@
+# 可选：定时唤醒（避免免费实例休眠后朋友打开要等冷启动）
+#
+# 用法：
+#   仓库 Settings → Secrets and variables → Actions → Variables → New variable
+#   名称 APP_URL，值形如 https://coco-dezhou.onrender.com
+#
+# 注意：仅建议在约局时段前后开启，长期 24 小时保活会消耗免费额度。
+# 不需要时直接在 Actions 页面 disable 这个 workflow。
+name: keepalive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          if [ -z "${{ vars.APP_URL }}" ]; then
+            echo "未配置 APP_URL 变量，跳过"; exit 0
+          fi
+          curl -sS --max-time 60 "${{ vars.APP_URL }}/api/health" && echo OK

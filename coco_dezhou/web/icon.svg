@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e7455"/>
+      <stop offset="1" stop-color="#08251c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6e0"/>
+      <stop offset="1" stop-color="#e8c479"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="192" height="192" rx="42" fill="url(#bg)"/>
+  <rect x="9" y="9" width="174" height="174" rx="35" fill="none" stroke="#e8c479" stroke-opacity="0.35" stroke-width="2"/>
+  <path d="M96 34c14 20 34 31 34 50 0 15-11 25-24 25-4 0-7-1-10-3 2 12 6 20 14 26H82c8-6 12-14 14-26-3 2-6 3-10 3-13 0-24-10-24-25 0-19 20-30 34-50z" fill="url(#gold)"/>
+  <text x="96" y="168" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#e8c479" text-anchor="middle" letter-spacing="3">TEXAS</text>
+</svg>

@@ -1,0 +1,13 @@
+# 依赖
+node_modules/
+
+# 运行时数据（房间表 / 战绩表 / 截图）
+data/
+
+# 打包产物（Hugging Face Space 目录）
+dist/
+
+# 系统文件与日志
+.DS_Store
+Thumbs.db
+*.log

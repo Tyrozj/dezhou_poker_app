@@ -1,0 +1,15 @@
+# 本机 / 自己的服务器上用 Docker 跑（带持久化数据卷）
+#   docker compose up -d --build
+#   打开 http://localhost:18080
+services:
+  dezhou:
+    build: .
+    container_name: coco-dezhou
+    restart: unless-stopped
+    ports:
+      - "18080:18080"
+    environment:
+      PORT: "18080"
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data

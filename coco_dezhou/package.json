@@ -1,0 +1,18 @@
+{
+  "name": "coco-dezhou",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "手机端多人德州扑克（CoCo 云房间 / 云数据表 架构，零依赖）",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "bots": "node tools/bots.mjs --create --seats 4 --count 3",
+    "test": "node tests/poker.test.mjs && node tests/table.test.mjs && node tests/e2e.test.mjs",
+    "test:unit": "node tests/poker.test.mjs && node tests/table.test.mjs",
+    "shots": "node tools/shot.mjs data/shots",
+    "hf": "node tools/make-hf-space.mjs"
+  }
+}

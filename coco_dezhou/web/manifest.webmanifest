@@ -1,0 +1,19 @@
+{
+  "name": "德扑云桌 · 多人德州扑克",
+  "short_name": "德扑云桌",
+  "description": "多台手机同房对战的德州扑克",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07110d",
+  "theme_color": "#0b1410",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
