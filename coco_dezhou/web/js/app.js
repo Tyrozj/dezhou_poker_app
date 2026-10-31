@@ -427,9 +427,7 @@ function seatEl(seat, xy, v, mySeat) {
   if (seat.allIn && !seat.folded) {
     node.appendChild(el('div', 'allin-badge', `ALL IN${seat.bet > 0 ? ' ' + fmt(seat.bet) : ''}`));
   } else if (seat.bet > 0) {
-    const chip = el('div', 'bet-chip');
-    chip.innerHTML = `${chipStack(seat.bet, v.settings.bb)}${fmt(seat.bet)}`;
-    node.appendChild(chip);
+    node.appendChild(el('div', 'bet-chip', fmt(seat.bet)));
   }
 
   // 赢家：方框右上角 WIN + 右侧 +筹码数
@@ -444,12 +442,6 @@ function seatEl(seat, xy, v, mySeat) {
     if (xy[0] > 70) node.classList.add('win-left');
   }
   return node;
-}
-
-/** 金额越大，筹码图案越多（1–5 个） */
-function chipStack(amount, bb) {
-  const n = Math.min(5, Math.max(1, Math.ceil(amount / (bb * 1.5))));
-  return `<span class="chip-stack">${'<i class="chip-dot"></i>'.repeat(n)}</span>`;
 }
 
 function escapeHtml(s) {

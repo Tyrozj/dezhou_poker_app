@@ -930,11 +930,11 @@ input[type=range].raise-range::-webkit-slider-thumb {
   100% { transform: perspective(520px) rotateY(0) scale(1); filter: none; }
 }
 
-/* ALL IN 徽章（贴在座位牌下沿，不会压到公共牌；不要火苗） */
+/* ALL IN 徽章（贴在座位牌下方，位于 SB/BB 标记的更下面，二者不重叠） */
 .allin-badge {
   position: absolute;
   left: 50%;
-  bottom: -11px;
+  bottom: -31px;
   transform: translateX(-50%);
   padding: 2px 7px;
   border-radius: 8px;
@@ -1017,24 +1017,6 @@ input[type=range].raise-range::-webkit-slider-thumb {
 }
 .seat.is-winner .plate {
   box-shadow: 0 0 0 2px rgba(232, 196, 121, 0.9), 0 0 18px rgba(232, 196, 121, 0.45);
-}
-
-/* 下注金额旁的筹码图案：金额越大，堆得越多 */
-.chip-stack {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  margin-right: 4px;
-  vertical-align: -2px;
-}
-.chip-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, #fff 0 24%, transparent 27%),
-    repeating-conic-gradient(#e8c479 0 45deg, #b8974f 45deg 90deg);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
 /* ===================== 房间聊天 ===================== */
