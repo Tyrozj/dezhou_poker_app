@@ -22,7 +22,6 @@ const S = {
   raiseOpen: false,
   raiseTo: 0,
   turnKey: '',
-  resultHand: 0,
   boardCount: 0,
   lastHand: 0,
   lastRoomState: null,
@@ -43,11 +42,11 @@ const LS_SESS = 'dz.sess';
 const SEAT_POS = {
   2: [[50, 84], [50, 20]],
   3: [[50, 84], [16, 27], [84, 27]],
-  4: [[50, 84], [11, 50], [50, 20], [89, 50]],
-  5: [[50, 84], [11, 56], [26, 18], [74, 18], [89, 56]],
-  6: [[50, 84], [10, 58], [18, 24], [50, 20], [82, 24], [90, 58]],
+  4: [[50, 84], [11, 56], [50, 20], [89, 56]],
+  5: [[50, 84], [11, 58], [26, 18], [74, 18], [89, 58]],
+  6: [[50, 84], [10, 60], [18, 24], [50, 20], [82, 24], [90, 60]],
   7: [[50, 84], [9, 62], [14, 34], [32, 18], [68, 18], [86, 34], [91, 62]],
-  8: [[50, 84], [9, 64], [13, 40], [30, 20], [50, 18], [70, 20], [87, 40], [91, 64]],
+  8: [[50, 84], [9, 64], [13, 38], [30, 20], [50, 18], [70, 20], [87, 38], [91, 64]],
 };
 
 function seatPositions(n) {
@@ -302,7 +301,6 @@ function renderTable() {
   renderMe(v);
   renderActions(v);
   renderLogStrip(v);
-  renderResult(v);
   updateTurnBar();
 }
 
@@ -419,18 +417,39 @@ function seatEl(seat, xy, v, mySeat) {
   if (seat.isDealer) {
     node.appendChild(el('div', 'dealer-btn', 'D'));
   }
+
+  // 小盲 / 大盲 位置标记（座位牌右下角）
+  if (v.phase !== 'waiting' && seat.inHand) {
+    if (seat.seat === v.sbSeat) node.appendChild(el('div', 'blind-tag', 'SB'));
+    else if (seat.seat === v.bbSeat) node.appendChild(el('div', 'blind-tag bb', 'BB'));
+  }
+
   if (seat.allIn && !seat.folded) {
-    const badge = el(
-      'div',
-      'allin-badge',
-      `ALL IN${seat.bet > 0 ? ' ' + fmt(seat.bet) : ''}
-       <i class="flame f1"></i><i class="flame f2"></i><i class="flame f3"></i>`,
-    );
-    node.appendChild(badge);
+    node.appendChild(el('div', 'allin-badge', `ALL IN${seat.bet > 0 ? ' ' + fmt(seat.bet) : ''}`));
   } else if (seat.bet > 0) {
-    node.appendChild(el('div', 'bet-chip', fmt(seat.bet)));
+    const chip = el('div', 'bet-chip');
+    chip.innerHTML = `${chipStack(seat.bet, v.settings.bb)}${fmt(seat.bet)}`;
+    node.appendChild(chip);
+  }
+
+  // 赢家：方框右上角 WIN + 右侧 +筹码数
+  const award =
+    v.phase === 'showdown' && v.results && v.results.awards
+      ? v.results.awards.find((a) => a.seat === seat.seat)
+      : null;
+  if (award) {
+    node.classList.add('is-winner');
+    node.appendChild(el('div', 'win-badge', 'WIN'));
+    node.appendChild(el('div', 'win-amount', `+${fmt(award.amount)}`));
+    if (xy[0] > 70) node.classList.add('win-left');
   }
   return node;
+}
+
+/** 金额越大，筹码图案越多（1–5 个） */
+function chipStack(amount, bb) {
+  const n = Math.min(5, Math.max(1, Math.ceil(amount / (bb * 1.5))));
+  return `<span class="chip-stack">${'<i class="chip-dot"></i>'.repeat(n)}</span>`;
 }
 
 function escapeHtml(s) {
@@ -686,65 +705,6 @@ function logText(e) {
     case 'pot': return `${(e.winners || []).map((w) => w.name).join('、')} 赢得 ${fmt(e.amount)}`;
     default: return '';
   }
-}
-
-/* ---------------- 结算弹层 ---------------- */
-
-function renderResult(v) {
-  const overlay = $('overlay-result');
-  const results = v.results;
-  if (!results || v.phase !== 'showdown') {
-    overlay.classList.remove('is-open');
-    return;
-  }
-  if (S.resultHand === v.handNo) return;
-  S.resultHand = v.handNo;
-
-  const board = results.board || v.board || [];
-  const boardBox = $('result-board');
-  boardBox.innerHTML = '';
-  for (const c of board) boardBox.appendChild(cardEl(c));
-
-  const list = $('result-list');
-  list.innerHTML = '';
-  const awards = results.awards || [];
-  const myId = S.me ? S.me.id : null;
-  const mySeat = v.you ? v.you.seat : -1;
-  const iWon = awards.some((a) => a.seat === mySeat);
-  if (mySeat >= 0) audio.play(iWon ? 'win' : 'lose');
-  for (const a of awards) {
-    const row = el('div', 'result-row' + (a.pid && a.pid === myId ? ' is-you' : ''));
-    row.innerHTML = `<span><span class="win-name">${escapeHtml(a.name)}</span><span class="win-hand">${a.handName || ''}</span></span>
-      <span class="win-amt">+${fmt(a.amount)}</span>`;
-    list.appendChild(row);
-  }
-  if (!awards.length) list.appendChild(el('div', 'empty', '本手无人获胜'));
-
-  // 本手输家：扣了多少筹码
-  const players = results.players || [];
-  const losers = players.filter((p) => p.delta < 0).sort((a, b) => a.delta - b.delta);
-  if (losers.length) {
-    const box = el('div', 'result-losers');
-    box.appendChild(el('div', 'rl-title', '本手输家'));
-    for (const p of losers) {
-      const row = el('div', 'rl-row');
-      row.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rl-amt">${signed(p.delta)}</span>`;
-      box.appendChild(row);
-    }
-    list.appendChild(box);
-  }
-
-  $('result-title').textContent = results.showdown ? '摊牌结果' : '本手结束';
-  $('result-foot').textContent = v.settings.autoStart
-    ? '下一手即将自动开始…'
-    : (v.you && v.you.isHost ? '点按关闭后手动开始下一手' : '等待房主开始下一手');
-
-  // 先让玩家看完翻牌与筹码飞向赢家，再弹结算面板
-  overlay.classList.remove('is-open');
-  clearTimeout(renderResult._timer);
-  renderResult._timer = setTimeout(() => {
-    if (S.view && S.view.phase === 'showdown' && S.resultHand === v.handNo) overlay.classList.add('is-open');
-  }, 1500);
 }
 
 /* ---------------- 计时条 ---------------- */
@@ -1152,15 +1112,19 @@ function runFx(prev, next) {
     }
   }
 
-  // 2. 公共牌：从荷官飞到桌面
+  // 2. 公共牌：翻牌三张一起发，转牌 / 河牌再一张一张来
   if (next.handNo === prev.handNo && next.board.length > prev.board.length) {
     dealerDeal();
     const slots = document.querySelectorAll('#board .pcard');
-    const added = next.board.length - prev.board.length;
-    for (let k = 0; k < added; k++) {
-      const i = prev.board.length + k;
+    const from = prev.board.length;
+    const to = next.board.length;
+    let t = 120;
+    for (let i = from; i < to; i++) {
+      const isFlop = i < 3;
+      if (i > from && !isFlop) t += 240; // 转牌/河牌之前停一下
       const slot = slots[i];
-      if (slot) flyCard(slot, { face: next.board[i], delay: 120 + k * 200, duration: 460 });
+      if (slot) flyCard(slot, { face: next.board[i], delay: t, duration: 420 });
+      t += isFlop ? 150 : 320;
     }
   }
 
@@ -1191,10 +1155,12 @@ function runFx(prev, next) {
     });
   }
 
-  // 4. 摊牌：翻牌 + 底池筹码飞给赢家
+  // 4. 摊牌：翻牌 + 底池筹码飞给赢家（不弹结算面板，直接在赢家座位上标 WIN）
   if (prev.phase !== 'showdown' && next.phase === 'showdown') {
     revealTableCards(next, prev.phase);
     const awards = (next.results && next.results.awards) || [];
+    const mySeat = next.you ? next.you.seat : -1;
+    if (mySeat >= 0) audio.play(awards.some((a) => a.seat === mySeat) ? 'win' : 'lose');
     if (awards.length && awards[0].seat >= 0) {
       const winner = seatNodeOf(awards[0].seat);
       setTimeout(() => collectChips(potNode, winner, awards[0].amount), 950);
@@ -1391,7 +1357,6 @@ function initTable() {
   $('btn-menu').addEventListener('click', () => openSheet('sheet-menu'));
   $('mask').addEventListener('click', closeSheets);
   $('log-strip').addEventListener('click', () => openSheet('sheet-log'));
-  $('overlay-result').addEventListener('click', () => $('overlay-result').classList.remove('is-open'));
 
   $('btn-history').addEventListener('click', () => {
     closeSheets();

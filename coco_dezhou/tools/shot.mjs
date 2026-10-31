@@ -177,14 +177,13 @@ try {
       url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
       waitMs: 4500,
       preEval: AUTOPLAY,
-      waitForSel: '#overlay-result.is-open',
+      waitForSel: '.win-badge',
       waitForMs: 90000,
     });
     await shoot({
       name: 'allin',
       url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
       waitMs: 4000,
-      preEval: `setInterval(function(){ var o=document.getElementById('overlay-result'); if(o && o.classList.contains('is-open')) o.classList.remove('is-open'); }, 400);`,
       waitForSel: '.allin-badge',
       waitForMs: 90000,
     });
@@ -192,7 +191,6 @@ try {
       name: 'history',
       url: `${BASE}/?room=${room}&nick=${encodeURIComponent(nick)}`,
       waitMs: 4500,
-      preEval: `document.getElementById('overlay-result').classList.remove('is-open');`,
       clickSel: '#btn-history',
       afterClickMs: 1200,
     });

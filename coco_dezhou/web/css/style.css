@@ -512,7 +512,7 @@ input[type=number] { -moz-appearance: textfield; }
   place-items: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   bottom: -13px;
-  right: -3px;
+  left: -4px;
   z-index: 2;
 }
 
@@ -648,80 +648,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
   text-overflow: ellipsis;
 }
 
-/* ===================== 弹层 ===================== */
-.overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(2, 8, 6, 0.62);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 40;
-  padding: 20px;
-}
-.overlay.is-open { display: flex; }
-.result-card {
-  width: 100%;
-  max-width: 380px;
-  border-radius: 20px;
-  padding: 18px 18px 14px;
-  background: linear-gradient(180deg, #14372b, #0a1e17);
-  border: 1px solid rgba(232, 196, 121, 0.3);
-  box-shadow: var(--shadow);
-  animation: pop 0.24s ease-out;
-}
-@keyframes pop {
-  from { transform: scale(0.92); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-.result-title {
-  text-align: center;
-  font-size: 15px;
-  color: var(--gold);
-  letter-spacing: 1px;
-  margin-bottom: 10px;
-}
-.result-board { display: flex; justify-content: center; gap: 4px; margin-bottom: 12px; }
-.result-board .pcard { width: 34px; }
-.result-list { display: flex; flex-direction: column; gap: 7px; }
-.result-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  font-size: 13.5px;
-}
-.result-row .win-name { color: var(--ink); }
-.result-row .win-hand { font-size: 11.5px; color: var(--ink-3); margin-left: 6px; }
-.result-row .win-amt { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
-.result-row.is-you { background: rgba(232, 196, 121, 0.12); border: 1px solid rgba(232, 196, 121, 0.3); }
-.result-foot { text-align: center; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
-
-.result-losers {
-  margin-top: 10px;
-  padding-top: 9px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.14);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.rl-title { font-size: 11px; color: var(--ink-3); letter-spacing: 1px; margin-bottom: 1px; }
-.rl-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12.5px;
-  color: var(--ink-2);
-  padding: 2px 4px;
-}
-.rl-amt { color: #ff8e87; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-/* 背景音乐选择 */
+/* ===================== 背景音乐选择 ===================== */
 .music-list { display: flex; flex-direction: column; gap: 8px; }
 .music-row {
   display: flex;
@@ -903,9 +830,10 @@ input[type=range].raise-range::-webkit-slider-thumb {
 .toast.is-show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ===================== 荷官 & 发牌特效 ===================== */
+/* 荷官是一张去底的人像，站在桌沿上方；高度与区域一致，不会压到顶部思考进度条 */
 .dealer-area {
   flex: 0 0 auto;
-  height: 106px;
+  height: 132px;
   margin-bottom: -22px;
   display: flex;
   align-items: flex-end;
@@ -915,22 +843,21 @@ input[type=range].raise-range::-webkit-slider-thumb {
   pointer-events: none;
 }
 .dealer {
-  width: 84px;
-  height: 112px;
-  border-radius: 42px 42px 12px 12px;
-  overflow: hidden;
-  background: #0b1c16;
-  border: 2px solid rgba(232, 196, 121, 0.5);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 18px rgba(232, 196, 121, 0.16);
+  width: 96px;
+  height: 132px;
   transform-origin: 50% 100%;
   animation: dealerIdle 5s ease-in-out infinite;
 }
+.dealer picture { display: block; width: 100%; height: 100%; }
 .dealer-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: 50% 5%;
+  object-fit: contain;
+  object-position: 50% 100%;
   display: block;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  user-select: none;
+  -webkit-user-drag: none;
 }
 @keyframes dealerIdle {
   0%, 100% { transform: translateY(0) }
@@ -939,7 +866,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
 .dealer.is-dealing { animation: dealerDeal 0.5s ease-in-out 3; }
 @keyframes dealerDeal {
   0%, 100% { transform: translateY(0) rotate(0) scale(1); }
-  45% { transform: translateY(-6px) rotate(-2deg) scale(1.03); }
+  45% { transform: translateY(-5px) rotate(-2deg) scale(1.03); }
 }
 
 .fly-card {
@@ -1000,7 +927,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
   100% { transform: perspective(520px) rotateY(0) scale(1); filter: none; }
 }
 
-/* ALL IN 徽章 + 火苗（贴在座位牌下沿，不会压到公共牌） */
+/* ALL IN 徽章（贴在座位牌下沿，不会压到公共牌；不要火苗） */
 .allin-badge {
   position: absolute;
   left: 50%;
@@ -1014,32 +941,97 @@ input[type=range].raise-range::-webkit-slider-thumb {
   color: #fff;
   background: linear-gradient(180deg, #ff8a3d, #c02418);
   border: 1px solid rgba(255, 200, 120, 0.65);
-  box-shadow: 0 0 10px rgba(255, 122, 61, 0.85), 0 0 24px rgba(255, 61, 26, 0.45);
+  box-shadow: 0 0 10px rgba(255, 122, 61, 0.6);
   white-space: nowrap;
   z-index: 4;
-  animation: allinPulse 1.1s ease-in-out infinite;
 }
-.allin-badge .flame {
+
+/* 小盲 / 大盲 标记：座位牌右下角 */
+.blind-tag {
   position: absolute;
-  top: -9px;
-  width: 9px;
-  height: 14px;
-  border-radius: 50% 50% 46% 46%;
-  background: radial-gradient(circle at 50% 82%, #fff6c4 0%, #ffb347 42%, #ff5a1f 72%, rgba(255, 90, 31, 0) 78%);
-  filter: blur(0.6px);
-  animation: flameFlicker 0.86s ease-in-out infinite;
+  right: -5px;
+  bottom: -9px;
+  min-width: 18px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 15px;
+  text-align: center;
+  color: #10251c;
+  background: linear-gradient(180deg, #f7e2ac, var(--gold));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  z-index: 4;
 }
-.allin-badge .flame.f1 { left: 18%; animation-delay: 0s; }
-.allin-badge .flame.f2 { left: 47%; animation-delay: 0.18s; height: 16px; }
-.allin-badge .flame.f3 { left: 74%; animation-delay: 0.32s; }
-@keyframes allinPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(255, 122, 61, 0.7), 0 0 18px rgba(255, 61, 26, 0.35); }
-  50% { box-shadow: 0 0 16px rgba(255, 150, 80, 0.95), 0 0 30px rgba(255, 61, 26, 0.6); }
+.blind-tag.bb {
+  color: #fff;
+  background: linear-gradient(180deg, #4d7d9c, #2c5670);
 }
-@keyframes flameFlicker {
-  0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.9; }
-  35% { transform: scaleY(1.28) translateY(-2px); opacity: 1; }
-  65% { transform: scaleY(0.85) translateY(1px); opacity: 0.75; }
+
+/* 侧边座位的 ALL IN 徽章往里靠一点，避免贴到屏幕边缘 */
+.seat.chip-left .allin-badge { transform: translateX(-64%); }
+.seat.chip-right .allin-badge { transform: translateX(-36%); }
+
+/* 赢家：方框右上角 WIN + 右侧 +筹码 */
+.win-badge {
+  position: absolute;
+  right: -6px;
+  top: -11px;
+  padding: 2px 7px;
+  border-radius: 7px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  color: #10251c;
+  background: linear-gradient(180deg, #fff3c9, var(--gold));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 12px rgba(232, 196, 121, 0.75);
+  z-index: 5;
+  animation: winPop 0.36s cubic-bezier(0.2, 1.3, 0.5, 1) both;
+}
+@keyframes winPop {
+  from { transform: scale(0.6) rotate(-8deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+.win-amount {
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 800;
+  color: #7ff0b6;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  z-index: 5;
+  animation: winPop 0.4s 0.08s cubic-bezier(0.2, 1.3, 0.5, 1) both;
+}
+.seat.win-left .win-amount {
+  left: auto;
+  right: calc(100% + 5px);
+}
+.seat.is-winner .plate {
+  box-shadow: 0 0 0 2px rgba(232, 196, 121, 0.9), 0 0 18px rgba(232, 196, 121, 0.45);
+}
+
+/* 下注金额旁的筹码图案：金额越大，堆得越多 */
+.chip-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0 24%, transparent 27%),
+    repeating-conic-gradient(#e8c479 0 45deg, #b8974f 45deg 90deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
 /* ===================== 房间聊天 ===================== */
@@ -1121,6 +1113,8 @@ input[type=range].raise-range::-webkit-slider-thumb {
 
 /* 小屏微调 */
 @media (max-height: 700px) {
+  .dealer-area { height: 108px; margin-bottom: -18px; }
+  .dealer { width: 78px; height: 108px; }
   .me-cards { height: 56px; }
   .me-cards .pcard { width: 40px; }
   .action-row .btn { height: 46px; }

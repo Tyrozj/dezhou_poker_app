@@ -166,9 +166,12 @@
 
   <div class="turn-bar"><i id="turn-fill"></i></div>
 
-    <div class="dealer-area">
+  <div class="dealer-area">
     <div class="dealer" id="dealer">
-      <img class="dealer-img" src="/img/dealer.jpg" alt="荷官" draggable="false" />
+      <picture>
+        <source srcset="/img/dealer.webp" type="image/webp" />
+        <img class="dealer-img" src="/img/dealer.png" alt="荷官" draggable="false" />
+      </picture>
     </div>
   </div>
 
@@ -199,16 +202,6 @@
     <span class="chat-badge" id="chat-badge" hidden>0</span>
   </button>
 </section>
-
-<!-- ============ 结果弹层 ============ -->
-<div class="overlay" id="overlay-result">
-  <div class="result-card">
-    <div class="result-title" id="result-title">本手结束</div>
-    <div class="result-board" id="result-board"></div>
-    <div class="result-list" id="result-list"></div>
-    <div class="result-foot" id="result-foot">3 秒后继续…</div>
-  </div>
-</div>
 
 <!-- ============ 菜单 ============ -->
 <div class="sheet-mask" id="mask"></div>
