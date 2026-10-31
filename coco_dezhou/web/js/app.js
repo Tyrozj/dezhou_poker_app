@@ -4,6 +4,7 @@
  */
 
 import { Net } from './net.js';
+import { audio } from './audio.js';
 import { evaluate, RANK_NAME, SUIT_SYMBOL } from '/shared/cards.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -27,6 +28,8 @@ const S = {
   history: null,
   histTab: 'hands',
   histOpen: new Set(),
+  logSeq: 0,
+  wasMyTurn: false,
 };
 
 const LS_NICK = 'dz.nick';
@@ -251,6 +254,7 @@ function initCreate() {
         actionSeconds: clamp(Number($('cfg-seconds').value), 10, 120),
         autoStart: $('cfg-autostart').checked,
         autoRebuy: $('cfg-autorebuy').checked,
+        timeoutFold: $('cfg-timeoutfold').checked,
       },
     });
     toast('正在创建房间…', 900);
@@ -544,17 +548,26 @@ function renderActions(v) {
   const row = el('div', 'action-row');
 
   const fold = el('button', 'btn act-fold', '弃牌');
-  fold.addEventListener('click', () => net.action({ type: 'fold' }));
+  fold.addEventListener('click', () => {
+    audio.play('fold');
+    net.action({ type: 'fold' });
+  });
   row.appendChild(fold);
 
   if (legal.check) {
     const check = el('button', 'btn act-check', '过牌');
-    check.addEventListener('click', () => net.action({ type: 'check' }));
+    check.addEventListener('click', () => {
+      audio.play('check');
+      net.action({ type: 'check' });
+    });
     row.appendChild(check);
   } else if (legal.call) {
     const allInCall = legal.call >= you.chips;
     const call = el('button', 'btn act-call', allInCall ? `全下 ${fmt(legal.call)}` : `跟注 ${fmt(legal.call)}`);
-    call.addEventListener('click', () => net.action({ type: 'call' }));
+    call.addEventListener('click', () => {
+      audio.play(allInCall ? 'allin' : 'chip');
+      net.action({ type: 'call' });
+    });
     row.appendChild(call);
   }
 
@@ -563,10 +576,12 @@ function renderActions(v) {
     const raiseBtn = el('button', 'btn act-raise', S.raiseOpen ? '确认加注' : '加注');
     raiseBtn.addEventListener('click', () => {
       if (!S.raiseOpen) {
+        audio.play('click');
         S.raiseOpen = true;
         S.raiseTo = minTo;
         renderActions(S.view);
       } else {
+        audio.play('raise');
         net.action({ type: 'raise', to: S.raiseTo });
         S.raiseOpen = false;
       }
@@ -576,7 +591,10 @@ function renderActions(v) {
 
   if (legal.allin) {
     const allin = el('button', 'btn act-allin', '全下');
-    allin.addEventListener('click', () => net.action({ type: 'allin' }));
+    allin.addEventListener('click', () => {
+      audio.play('allin');
+      net.action({ type: 'allin' });
+    });
     row.appendChild(allin);
   }
 
@@ -650,6 +668,7 @@ function logText(e) {
     case 'street': return `${e.name}：${(e.board || []).map((c) => SUIT_SYMBOL[c[1]] + RANK_NAME[c[0]]).join(' ')}`;
     case 'action': return `${e.name} ${e.label}${e.amount ? ' ' + fmt(e.amount) : ''}`;
     case 'timeout': return `${e.name} 超时，自动${e.auto === 'check' ? '过牌' : '弃牌'}`;
+    case 'autositout': return `${e.name} 连续超时，已自动旁观`;
     case 'win': return `${e.name} 赢下 ${fmt(e.amount)}${e.handName ? `（${e.handName}）` : ''}`;
     case 'busted': return `${e.name} 筹码输光`;
     case 'rebuy': return `${e.name} 补码 ${fmt(e.amount)}`;
@@ -679,6 +698,9 @@ function renderResult(v) {
   list.innerHTML = '';
   const awards = results.awards || [];
   const myId = S.me ? S.me.id : null;
+  const mySeat = v.you ? v.you.seat : -1;
+  const iWon = awards.some((a) => a.seat === mySeat);
+  if (mySeat >= 0) audio.play(iWon ? 'win' : 'lose');
   for (const a of awards) {
     const row = el('div', 'result-row' + (a.pid && a.pid === myId ? ' is-you' : ''));
     row.innerHTML = `<span><span class="win-name">${escapeHtml(a.name)}</span><span class="win-hand">${a.handName || ''}</span></span>
@@ -929,6 +951,98 @@ function renderHistPlayers(body, h) {
   }
 }
 
+/* ---------------- 声音 ---------------- */
+
+const SOUND_BY_LABEL = {
+  弃牌: 'fold',
+  过牌: 'check',
+  跟注: 'chip',
+  加注: 'raise',
+  全下: 'allin',
+  小盲: 'chip',
+  大盲: 'chip',
+};
+
+function soundForLog(e) {
+  switch (e.t) {
+    case 'hand':
+    case 'street':
+      return 'deal';
+    case 'post':
+      return 'chip';
+    case 'action':
+      return SOUND_BY_LABEL[e.label] || 'chip';
+    case 'timeout':
+    case 'autositout':
+      return 'fold';
+    case 'busted':
+      return 'lose';
+    case 'rebuy':
+      return 'chip';
+    case 'join':
+      return 'join';
+    case 'leave':
+      return 'click';
+    default:
+      return null;
+  }
+}
+
+/** 根据新出现的日志条目播放音效（第一次进入不补播历史） */
+function playLogSounds(log) {
+  if (!Array.isArray(log) || !log.length) return;
+  const last = log[log.length - 1].i || 0;
+  if (!S.logSeq) {
+    S.logSeq = last;
+    return;
+  }
+  const mySeat = S.view && S.view.you ? S.view.you.seat : -1;
+  const fresh = log.filter((e) => (e.i || 0) > S.logSeq);
+  S.logSeq = last;
+  for (const e of fresh) {
+    // 自己点按钮时已经即时发声了，避免重音
+    if (e.t === 'action' && e.seat === mySeat) continue;
+    const name = soundForLog(e);
+    if (name) audio.play(name);
+  }
+}
+
+function initAudio() {
+  const musicBtn = $('btn-music');
+  const sfxBtn = $('btn-sfx');
+  const paint = () => {
+    musicBtn.classList.toggle('is-off', !audio.musicOn);
+    sfxBtn.classList.toggle('is-off', !audio.sfxOn);
+  };
+  paint();
+
+  musicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    audio.unlock();
+    audio.setMusic(!audio.musicOn);
+    paint();
+    audio.play('click');
+    toast(audio.musicOn ? '背景音乐：开' : '背景音乐：关', 900);
+  });
+
+  sfxBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    audio.unlock();
+    audio.setSfx(!audio.sfxOn);
+    paint();
+    if (audio.sfxOn) audio.play('chip');
+    toast(audio.sfxOn ? '音效：开' : '音效：关', 900);
+  });
+
+  // 浏览器要求用户手势后才能出声
+  const unlock = () => audio.unlock();
+  document.addEventListener('pointerdown', unlock, { once: true, passive: true });
+  document.addEventListener('keydown', unlock, { once: true });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && audio.musicOn) audio.ensure();
+  });
+}
+
 /* ---------------- 网络事件 ---------------- */
 
 function initNet() {
@@ -966,6 +1080,12 @@ function initNet() {
     if (payload.you && payload.room) {
       localStorage.setItem(LS_SESS, JSON.stringify({ code: payload.room.code, token: payload.you.token }));
     }
+    // 声音：新日志条目 + "轮到你了"
+    const myTurn = !!(S.view.you && S.view.you.isTurn);
+    playLogSounds(S.view.log);
+    if (myTurn && !S.wasMyTurn) audio.play('turn');
+    S.wasMyTurn = myTurn;
+
     if (S.screen !== 'table') {
       showScreen('table');
       closeSheets();
@@ -1061,6 +1181,7 @@ function boot() {
   initLobby();
   initCreate();
   initTable();
+  initAudio();
   initNet();
 
   const savedNick = localStorage.getItem(LS_NICK);
@@ -1096,6 +1217,8 @@ function boot() {
   if (location.hash === '#create') showScreen('create');
 
   net.connect();
+  // 调试用：控制台里可以 __dezhou.audio.setMusic(false) 之类
+  window.__dezhou = { audio, state: S, net };
   setInterval(updateTurnBar, 200);
   setInterval(() => {
     if (S.screen === 'table' && S.view && S.view.you && S.view.you.isTurn) {

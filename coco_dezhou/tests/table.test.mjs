@@ -136,6 +136,77 @@ test('超时：无下注时自动过牌，有下注时自动弃牌', () => {
   assert.equal(t.phase, 'showdown');
 });
 
+test('超时自动弃牌：timeoutFold 开启时，即使无需跟注也弃牌', () => {
+  const order = ['2s', '3h', '4s', '5h', '6c', '7d', '8s', '9h', 'Tc', 'Jd', 'Qd', 'Kd', 'Ad'];
+  const t = newTable({ seats: 2, timeoutFold: true }, order);
+  t.addPlayer('p1', 'A');
+  t.addPlayer('p2', 'B');
+  t.startHand();
+  t.act('p1', { type: 'call' });
+  t.act('p2', { type: 'check' }); // 进入翻牌，轮到 p2（大盲），无需跟注
+  assert.equal(t.street, 1);
+  const actor = t.seats[t.actorSeat];
+  t.timeout();
+  assert.equal(actor.folded, true, '开启 timeoutFold 时超时一律弃牌');
+  assert.equal(t.phase, 'showdown');
+});
+
+test('超时自动过牌：timeoutFold 关闭时，无需跟注则过牌', () => {
+  const order = ['2s', '3h', '4s', '5h', '6c', '7d', '8s', '9h', 'Tc', 'Jd', 'Qd', 'Kd', 'Ad'];
+  const t = newTable({ seats: 2, timeoutFold: false }, order);
+  t.addPlayer('p1', 'A');
+  t.addPlayer('p2', 'B');
+  t.startHand();
+  t.act('p1', { type: 'call' });
+  t.act('p2', { type: 'check' });
+  const actorSeat = t.actorSeat;
+  t.timeout();
+  assert.equal(t.seats[actorSeat].folded, false, '关闭后应自动过牌而不是弃牌');
+  assert.equal(t.seats[actorSeat].hasActed, true);
+});
+
+test('连续 3 次超时后自动旁观，手动行动会清零计数', () => {
+  const order = ['2s', '3h', '4s', '5h', '6c', '7d', '8s', '9h', 'Tc', 'Jd', 'Qd', 'Kd', 'Ad',
+    'Ah', 'Kh', 'Qh', 'Jh', 'Th', '9d', '8d', '7c', '6s', '5c', '4c', '3c', '2d'];
+  const t = newTable({ seats: 2, timeoutFold: true }, order);
+  t.addPlayer('p1', 'A');
+  t.addPlayer('p2', 'B');
+
+  // 轮到 p1 时让它超时；轮到别人时正常行动，保证超时计数都落在 p1 身上
+  const timeoutWhenP1 = () => {
+    for (let i = 0; i < 20 && t.phase === 'betting'; i++) {
+      const actor = t.seats[t.actorSeat];
+      if (actor.pid === 'p1') {
+        t.timeout();
+        return true;
+      }
+      t.act(actor.pid, t.toCallOf(t.actorSeat) > 0 ? { type: 'call' } : { type: 'check' });
+    }
+    return false;
+  };
+
+  t.startHand();
+  assert.equal(timeoutWhenP1(), true);
+  assert.equal(t.seats[0].timeoutStreak, 1);
+
+  // 手动行动（弃牌）应把连续超时清零
+  t.startHand();
+  for (let i = 0; i < 20 && t.phase === 'betting' && t.seats[t.actorSeat].pid !== 'p1'; i++) {
+    t.act(t.seats[t.actorSeat].pid, t.toCallOf(t.actorSeat) > 0 ? { type: 'call' } : { type: 'check' });
+  }
+  if (t.phase === 'betting') t.act('p1', { type: 'fold' });
+  assert.equal(t.seats[0].timeoutStreak, 0, '手动行动后连续超时计数清零');
+
+  // 再连续超时 3 次
+  for (let round = 1; round <= 3; round++) {
+    t.startHand();
+    timeoutWhenP1();
+    assert.equal(t.seats[0].timeoutStreak, round, `第 ${round} 次超时计数`);
+  }
+  assert.equal(t.seats[0].sitOut, true, '连续 3 次超时后自动旁观');
+  assert.equal(t.eligibleSeats().includes(0), false, '下一手不再给他发牌');
+});
+
 test('中途加入的人等下一手才发牌', () => {
   const order = ['2s', '3h', '4s', '5h', '6c', '7d', '8s', '9h', 'Tc', 'Jd', 'Qd', 'Kd', 'Ad',
     'Ah', 'Kh', 'Qh', 'Jh', 'Th', '9d', '8d', '7c', '6s', '5c', '4c', '3c', '2d'];

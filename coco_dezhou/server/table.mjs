@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   autoStart: true,   // 一手结束后自动开下一手
   autoRebuy: false,  // 筹码输光自动补码到起始筹码
   rebuyAmount: 0,    // 手动补码数额，0 表示用起始筹码
+  timeoutFold: true, // 超时是否一律弃牌（false = 无需跟注时自动过牌）
 };
 
 export function normalizeSettings(input = {}) {
@@ -30,6 +31,7 @@ export function normalizeSettings(input = {}) {
   s.autoStart = !!s.autoStart;
   s.autoRebuy = !!s.autoRebuy;
   s.rebuyAmount = clampInt(s.rebuyAmount, 0, 1000000, 0);
+  s.timeoutFold = input.timeoutFold === undefined ? true : !!input.timeoutFold;
   return s;
 }
 
@@ -116,6 +118,7 @@ export class GameTable {
       connected: true,
       lastAction: '',
       lastWin: 0,
+      timeoutStreak: 0, // 连续超时次数，达到 3 次自动旁观
       joinedHand: this.handNo,
     };
     this._log({ t: 'join', seat: idx, name });
@@ -401,13 +404,16 @@ export class GameTable {
 
   /* ---------------- 行动 ---------------- */
 
-  act(pid, action = {}) {
+  act(pid, action = {}, opts = {}) {
     if (this.phase !== 'betting') return { ok: false, error: '当前不在牌局中' };
     const idx = this.seatOf(pid);
     if (idx < 0) return { ok: false, error: '你不在牌桌上' };
     if (idx !== this.actorSeat) return { ok: false, error: '还没轮到你行动' };
     const seat = this.seats[idx];
     if (this._needsAction(seat) === false) return { ok: false, error: '当前无法行动' };
+
+    // 手动行动说明人还在，清空"连续超时"计数
+    if (!opts.auto) seat.timeoutStreak = 0;
 
     const toCall = this.toCallOf(idx);
     const type = String(action.type || '').toLowerCase();
@@ -497,16 +503,27 @@ export class GameTable {
     return pay;
   }
 
-  /** 超时自动行动：能过牌就过牌，否则弃牌。 */
+  /**
+   * 超时自动行动：默认一律弃牌（timeoutFold=true），
+   * 关闭该设置后改为"能过牌就过牌，否则弃牌"。
+   * 连续 3 次超时自动进入旁观，避免整桌陪着等一个不在的人。
+   */
   timeout() {
     if (this.phase !== 'betting' || this.actorSeat < 0) return { ok: false };
     const idx = this.actorSeat;
     const seat = this.seats[idx];
     if (!seat) return { ok: false };
     const toCall = this.toCallOf(idx);
-    const type = toCall === 0 ? 'check' : 'fold';
-    this._log({ t: 'timeout', seat: idx, name: seat.name, auto: type });
-    return this.act(seat.pid, { type });
+    const type = this.settings.timeoutFold ? 'fold' : toCall === 0 ? 'check' : 'fold';
+    seat.timeoutStreak = (seat.timeoutStreak || 0) + 1;
+    this._log({ t: 'timeout', seat: idx, name: seat.name, auto: type, streak: seat.timeoutStreak });
+    const result = this.act(seat.pid, { type }, { auto: true });
+    if (seat.timeoutStreak >= 3 && !seat.sitOut) {
+      seat.sitOut = true;
+      this._log({ t: 'autositout', seat: idx, name: seat.name, streak: seat.timeoutStreak });
+      this._touch('自动旁观');
+    }
+    return result;
   }
 
   /* ---------------- 结算 ---------------- */

@@ -207,8 +207,21 @@ button { border: 0; background: none; cursor: pointer; }
   border: 1px solid var(--line);
   display: grid;
   place-items: center;
+  position: relative;
 }
 .icon-btn:active { background: rgba(255, 255, 255, 0.12); }
+.icon-btn.is-off { opacity: 0.5; }
+.icon-btn.is-off::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: 50%;
+  height: 2px;
+  border-radius: 2px;
+  background: #ff8e87;
+  transform: rotate(-42deg);
+}
 
 /* ===================== 创建房间 ===================== */
 .screen-create { overflow-y: auto; -webkit-overflow-scrolling: touch; }

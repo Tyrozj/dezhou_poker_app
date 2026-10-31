@@ -130,6 +130,15 @@
 
     <label class="switch-row">
       <span>
+        <strong>超时自动弃牌</strong>
+        <em>时间到一律弃牌；关闭后无需跟注时改为自动过牌</em>
+      </span>
+      <input id="cfg-timeoutfold" type="checkbox" checked>
+      <i class="switch"></i>
+    </label>
+
+    <label class="switch-row">
+      <span>
         <strong>输光自动补码</strong>
         <em>筹码清零后回到起始筹码</em>
       </span>
@@ -150,6 +159,8 @@
       <div class="room-code" id="room-code">#------</div>
       <div class="room-meta" id="room-meta">盲注 --/--</div>
     </div>
+    <button class="icon-btn" id="btn-music" title="背景音乐">♫</button>
+    <button class="icon-btn" id="btn-sfx" title="音效">🔊</button>
     <button class="icon-btn" id="btn-menu">⋯</button>
   </header>
 
