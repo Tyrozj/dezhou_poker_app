@@ -4,7 +4,7 @@
  */
 
 import { Net } from './net.js';
-import { audio } from './audio.js';
+import { audio, TRACKS } from './audio.js';
 import { flyCard, pushChips, collectChips, revealTableCards, dealerDeal } from './fx.js';
 import { evaluate, RANK_NAME, SUIT_SYMBOL } from '/shared/cards.mjs';
 
@@ -718,12 +718,31 @@ function renderResult(v) {
   }
   if (!awards.length) list.appendChild(el('div', 'empty', '本手无人获胜'));
 
+  // 本手输家：扣了多少筹码
+  const players = results.players || [];
+  const losers = players.filter((p) => p.delta < 0).sort((a, b) => a.delta - b.delta);
+  if (losers.length) {
+    const box = el('div', 'result-losers');
+    box.appendChild(el('div', 'rl-title', '本手输家'));
+    for (const p of losers) {
+      const row = el('div', 'rl-row');
+      row.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="rl-amt">${signed(p.delta)}</span>`;
+      box.appendChild(row);
+    }
+    list.appendChild(box);
+  }
+
   $('result-title').textContent = results.showdown ? '摊牌结果' : '本手结束';
   $('result-foot').textContent = v.settings.autoStart
     ? '下一手即将自动开始…'
     : (v.you && v.you.isHost ? '点按关闭后手动开始下一手' : '等待房主开始下一手');
 
-  overlay.classList.add('is-open');
+  // 先让玩家看完翻牌与筹码飞向赢家，再弹结算面板
+  overlay.classList.remove('is-open');
+  clearTimeout(renderResult._timer);
+  renderResult._timer = setTimeout(() => {
+    if (S.view && S.view.phase === 'showdown' && S.resultHand === v.handNo) overlay.classList.add('is-open');
+  }, 1500);
 }
 
 /* ---------------- 计时条 ---------------- */
@@ -747,6 +766,7 @@ function openSheet(id) {
   $(id).classList.add('is-open');
   if (id === 'sheet-menu') renderMenu();
   if (id === 'sheet-log') renderLogSheet();
+  if (id === 'sheet-music') renderMusicList();
   if (id === 'sheet-history') {
     renderHistory();
     net.requestHistory();
@@ -1016,6 +1036,25 @@ function playLogSounds(log) {
   }
 }
 
+function renderMusicList() {
+  const box = $('music-list');
+  if (!box) return;
+  box.innerHTML = '';
+  const rows = [
+    { id: 'off', name: '关闭背景音乐', desc: '只想安静打牌' },
+    ...TRACKS.map((t) => ({ id: t.id, name: t.name, desc: t.desc })),
+  ];
+  for (const r of rows) {
+    const isOff = r.id === 'off';
+    const active = isOff ? !audio.musicOn : audio.musicOn && audio.trackId === r.id;
+    const row = el('button', 'music-row' + (active ? ' is-active' : '') + (isOff ? ' is-off' : ''));
+    row.dataset.track = r.id;
+    row.innerHTML = `<div class="mr-main"><div class="mr-name">${r.name}</div><div class="mr-desc">${r.desc}</div></div>
+      <span class="mr-mark">${active ? (isOff ? '已关闭' : '播放中') : '选择'}</span>`;
+    box.appendChild(row);
+  }
+}
+
 function initAudio() {
   const musicBtn = $('btn-music');
   const sfxBtn = $('btn-sfx');
@@ -1024,14 +1063,30 @@ function initAudio() {
     sfxBtn.classList.toggle('is-off', !audio.sfxOn);
   };
   paint();
+  renderMusicList();
 
   musicBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     audio.unlock();
-    audio.setMusic(!audio.musicOn);
-    paint();
     audio.play('click');
-    toast(audio.musicOn ? '背景音乐：开' : '背景音乐：关', 900);
+    closeSheets();
+    openSheet('sheet-music');
+  });
+
+  $('music-list').addEventListener('click', (e) => {
+    const row = e.target.closest('.music-row');
+    if (!row) return;
+    audio.unlock();
+    const id = row.dataset.track;
+    if (id === 'off') {
+      audio.setMusic(false);
+    } else {
+      audio.setTrack(id);
+      audio.setMusic(true);
+    }
+    audio.play('click');
+    paint();
+    renderMusicList();
   });
 
   sfxBtn.addEventListener('click', (e) => {
@@ -1072,18 +1127,21 @@ const seatNodeOf = (i) => document.querySelector(`.seat[data-seat="${i}"]`);
 function runFx(prev, next) {
   if (!prev || !next) return;
   const potNode = $('pot');
+  const seatCount = next.settings.seats;
 
-  // 1. 新的一手：荷官给每个人发两张底牌
+  // 1. 新的一手：荷官一张一张发底牌（不赶时间）
   if (next.phase === 'betting' && next.handNo !== prev.handNo) {
     dealerDeal();
     const order = dealOrder(next);
-    let t = 130;
+    const gap = seatCount <= 4 ? 430 : seatCount <= 6 ? 330 : 270;
+    let t = 220;
     for (let round = 0; round < 2; round++) {
       for (const idx of order) {
         const node = seatNodeOf(idx);
         const target = node ? node.querySelector('.hole') || node : null;
-        if (target) flyCard(target, { delay: t, duration: 360 });
-        t += 75;
+        if (target) flyCard(target, { delay: t, duration: 470 });
+        if (round === 0) setTimeout(() => audio.play('deal'), t);
+        t += gap;
       }
     }
   }
@@ -1096,21 +1154,36 @@ function runFx(prev, next) {
     for (let k = 0; k < added; k++) {
       const i = prev.board.length + k;
       const slot = slots[i];
-      if (slot) flyCard(slot, { face: next.board[i], delay: 90 + k * 160, duration: 420 });
+      if (slot) flyCard(slot, { face: next.board[i], delay: 120 + k * 200, duration: 460 });
     }
   }
 
-  // 3. 下注：筹码从座位推到桌面中央
+  // 3. 跟注/加注：筹码先堆在自己面前（落在自己的注额上）
   let delay = 0;
   next.seats.forEach((s, i) => {
     if (!s) return;
     const before = prev.seats[i] ? prev.seats[i].bet || 0 : 0;
     const delta = (s.bet || 0) - before;
-    if (delta > 0) {
-      pushChips(seatNodeOf(i), potNode, delta, { delay });
-      delay += 70;
-    }
+    if (delta <= 0) return;
+    const node = seatNodeOf(i);
+    const front =
+      (node && (node.querySelector('.bet-chip') || node.querySelector('.allin-badge') || node.querySelector('.plate'))) || potNode;
+    pushChips(node, front, delta, { delay });
+    delay += 90;
   });
+
+  // 3.5 一轮下注结束：大家面前的筹码一起收进池子
+  const potWas = prev.potCollected || 0;
+  const potNow = next.potCollected || 0;
+  if (potNow > potWas) {
+    let d = 0;
+    prev.seats.forEach((p, i) => {
+      if (p && p.bet > 0) {
+        pushChips(seatNodeOf(i), potNode, p.bet, { delay: d });
+        d += 60;
+      }
+    });
+  }
 
   // 4. 摊牌：翻牌 + 底池筹码飞给赢家
   if (prev.phase !== 'showdown' && next.phase === 'showdown') {
@@ -1118,7 +1191,7 @@ function runFx(prev, next) {
     const awards = (next.results && next.results.awards) || [];
     if (awards.length && awards[0].seat >= 0) {
       const winner = seatNodeOf(awards[0].seat);
-      setTimeout(() => collectChips(potNode, winner, awards[0].amount), 520);
+      setTimeout(() => collectChips(potNode, winner, awards[0].amount), 950);
     }
   }
 }

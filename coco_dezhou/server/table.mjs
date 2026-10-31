@@ -724,6 +724,8 @@ export class GameTable {
     if (this.history.length > this.maxHistory) this.history.splice(0, this.history.length - this.maxHistory);
     this.handsRecorded += 1;
     this.lastRecord = record;
+    // 结算面板要展示"谁输了多少"，挂在 results 上一并下发
+    if (this.results) this.results.players = players;
     return record;
   }
 
@@ -838,6 +840,7 @@ export class GameTable {
       streetName: this.phase === 'betting' ? STREET_NAMES[this.street] : STREET_NAMES[3],
       board: this.board.slice(),
       pot: this.phase === 'betting' ? this.pot + this._betsTotal() : (this.lastPot || 0),
+      potCollected: this.phase === 'betting' ? this.pot : (this.lastPot || 0),
       currentBet: this.currentBet,
       minRaise: this.minRaise,
       dealerSeat: this.dealerSeat,

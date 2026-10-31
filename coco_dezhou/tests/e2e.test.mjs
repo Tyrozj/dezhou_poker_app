@@ -180,6 +180,12 @@ test('三人一桌：创建房间 / 房号加入 / 打到摊牌 / 断线重连',
   assert.equal(final.table.board.length, 5, '摊牌时公共牌应有 5 张');
   assert.ok(final.table.results, '应有本手结果');
   assert.ok(final.table.results.awards.length >= 1);
+  assert.equal(final.table.results.players.length, 3, '结算里应带上每个人的输赢');
+  assert.equal(
+    final.table.results.players.reduce((a, p) => a + p.delta, 0),
+    0,
+    '结算输赢相加为 0',
+  );
   console.log('[e2e] 8 摊牌完成，赢家', final.table.results.awards.map((a) => `${a.name}+${a.amount}`).join(','));
 
   // 摊牌时所有人底牌公开

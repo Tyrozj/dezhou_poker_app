@@ -702,6 +702,57 @@ input[type=range].raise-range::-webkit-slider-thumb {
 .result-row.is-you { background: rgba(232, 196, 121, 0.12); border: 1px solid rgba(232, 196, 121, 0.3); }
 .result-foot { text-align: center; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
 
+.result-losers {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rl-title { font-size: 11px; color: var(--ink-3); letter-spacing: 1px; margin-bottom: 1px; }
+.rl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 2px 4px;
+}
+.rl-amt { color: #ff8e87; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* 背景音乐选择 */
+.music-list { display: flex; flex-direction: column; gap: 8px; }
+.music-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  text-align: left;
+  width: 100%;
+  color: var(--ink);
+}
+.music-row .mr-main { flex: 1; min-width: 0; }
+.music-row .mr-name { font-size: 14px; }
+.music-row .mr-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+.music-row .mr-mark {
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px solid rgba(232, 196, 121, 0.4);
+  border-radius: 20px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.music-row.is-active {
+  background: rgba(232, 196, 121, 0.12);
+  border-color: rgba(232, 196, 121, 0.45);
+}
+.music-row.is-off .mr-name { color: var(--ink-2); }
+.music-note { font-size: 11px; color: var(--ink-3); text-align: center; margin: 12px 0 0; }
+
 .sheet-mask {
   position: fixed;
   inset: 0;
@@ -854,8 +905,8 @@ input[type=range].raise-range::-webkit-slider-thumb {
 /* ===================== 荷官 & 发牌特效 ===================== */
 .dealer-area {
   flex: 0 0 auto;
-  height: 72px;
-  margin-bottom: -10px;
+  height: 106px;
+  margin-bottom: -22px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -864,37 +915,31 @@ input[type=range].raise-range::-webkit-slider-thumb {
   pointer-events: none;
 }
 .dealer {
-  width: 96px;
-  height: 82px;
+  width: 84px;
+  height: 112px;
+  border-radius: 42px 42px 12px 12px;
+  overflow: hidden;
+  background: #0b1c16;
+  border: 2px solid rgba(232, 196, 121, 0.5);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 18px rgba(232, 196, 121, 0.16);
   transform-origin: 50% 100%;
   animation: dealerIdle 5s ease-in-out infinite;
 }
-.dealer-svg {
+.dealer-img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  object-position: 50% 5%;
   display: block;
-  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5));
 }
 @keyframes dealerIdle {
   0%, 100% { transform: translateY(0) }
   50% { transform: translateY(-2px) }
 }
-.dealer.is-dealing { animation: dealerBounce 0.42s ease-in-out 3; }
-.dealer.is-dealing .dealer-arm { animation: dealerArm 0.42s ease-in-out 3; }
-.dealer.is-dealing .dealer-card { animation: dealerCard 0.42s ease-in-out 3; }
-.dealer-arm { transform-origin: 98px 100px; }
-.dealer-card { transform-origin: 118px 84px; }
-@keyframes dealerBounce {
-  0%, 100% { transform: translateY(0) }
-  50% { transform: translateY(-4px) }
-}
-@keyframes dealerArm {
-  0%, 100% { transform: rotate(0) }
-  45% { transform: rotate(-16deg) }
-}
-@keyframes dealerCard {
-  0%, 100% { transform: translate(0, 0) }
-  45% { transform: translate(-8px, -6px) }
+.dealer.is-dealing { animation: dealerDeal 0.5s ease-in-out 3; }
+@keyframes dealerDeal {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  45% { transform: translateY(-6px) rotate(-2deg) scale(1.03); }
 }
 
 .fly-card {
@@ -910,7 +955,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
   justify-content: center;
   font-weight: 800;
   color: #16202a;
-  z-index: 60;
+  z-index: 35;
   pointer-events: none;
   will-change: transform, opacity;
 }
@@ -929,7 +974,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
     radial-gradient(circle at 50% 50%, #fff 0 26%, transparent 29%),
     repeating-conic-gradient(#e8c479 0 24deg, #b8974f 24deg 48deg);
   box-shadow: inset 0 0 0 2px #f7e2ac, 0 3px 8px rgba(0, 0, 0, 0.45);
-  z-index: 58;
+  z-index: 33;
   pointer-events: none;
   will-change: transform, opacity;
 }
@@ -940,7 +985,7 @@ input[type=range].raise-range::-webkit-slider-thumb {
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  z-index: 59;
+  z-index: 34;
   pointer-events: none;
   white-space: nowrap;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
