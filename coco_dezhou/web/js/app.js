@@ -5,6 +5,7 @@
 
 import { Net } from './net.js';
 import { audio } from './audio.js';
+import { flyCard, pushChips, collectChips, revealTableCards, dealerDeal } from './fx.js';
 import { evaluate, RANK_NAME, SUIT_SYMBOL } from '/shared/cards.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -38,13 +39,13 @@ const LS_SESS = 'dz.sess';
 /* ---------------- 座位坐标（p=0 永远是自己，位于正下方） ---------------- */
 
 const SEAT_POS = {
-  2: [[50, 84], [50, 12]],
+  2: [[50, 84], [50, 20]],
   3: [[50, 84], [16, 27], [84, 27]],
-  4: [[50, 84], [11, 50], [50, 12], [89, 50]],
-  5: [[50, 84], [11, 56], [26, 16], [74, 16], [89, 56]],
-  6: [[50, 84], [10, 58], [18, 20], [50, 12], [82, 20], [90, 58]],
-  7: [[50, 84], [9, 62], [14, 32], [32, 13], [68, 13], [86, 32], [91, 62]],
-  8: [[50, 84], [9, 64], [13, 38], [30, 14], [50, 10], [70, 14], [87, 38], [91, 64]],
+  4: [[50, 84], [11, 50], [50, 20], [89, 50]],
+  5: [[50, 84], [11, 56], [26, 18], [74, 18], [89, 56]],
+  6: [[50, 84], [10, 58], [18, 24], [50, 20], [82, 24], [90, 58]],
+  7: [[50, 84], [9, 62], [14, 34], [32, 18], [68, 18], [86, 34], [91, 62]],
+  8: [[50, 84], [9, 64], [13, 40], [30, 20], [50, 18], [70, 20], [87, 40], [91, 64]],
 };
 
 function seatPositions(n) {
@@ -367,6 +368,7 @@ function seatEl(seat, xy, v, mySeat) {
   const node = el('div', cls.join(' '));
   node.style.left = xy[0] + '%';
   node.style.top = xy[1] + '%';
+  node.dataset.seat = String(seat.seat);
 
   if (isMe && seat.chips === 0) {
     node.addEventListener('click', () => net.rebuy());
@@ -392,8 +394,7 @@ function seatEl(seat, xy, v, mySeat) {
     tag = '弃牌';
     tagCls = 'fold';
   } else if (seat.allIn) {
-    tag = '全下';
-    tagCls = 'allin';
+    tag = ''; // ALL IN 徽章已经表达了，不再重复
   } else if (isTurn) {
     tag = '思考中';
     tagCls = 'act';
@@ -416,7 +417,15 @@ function seatEl(seat, xy, v, mySeat) {
   if (seat.isDealer) {
     node.appendChild(el('div', 'dealer-btn', 'D'));
   }
-  if (seat.bet > 0) {
+  if (seat.allIn && !seat.folded) {
+    const badge = el(
+      'div',
+      'allin-badge',
+      `ALL IN${seat.bet > 0 ? ' ' + fmt(seat.bet) : ''}
+       <i class="flame f1"></i><i class="flame f2"></i><i class="flame f3"></i>`,
+    );
+    node.appendChild(badge);
+  } else if (seat.bet > 0) {
     node.appendChild(el('div', 'bet-chip', fmt(seat.bet)));
   }
   return node;
@@ -1043,6 +1052,77 @@ function initAudio() {
   });
 }
 
+/* ---------------- 桌面特效 ---------------- */
+
+function dealOrder(v) {
+  const n = v.settings.seats;
+  const start = v.sbSeat >= 0 ? v.sbSeat : (v.dealerSeat + 1 + n) % n;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const idx = (start + i) % n;
+    const s = v.seats[idx];
+    if (s && s.inHand) out.push(idx);
+  }
+  return out;
+}
+
+const seatNodeOf = (i) => document.querySelector(`.seat[data-seat="${i}"]`);
+
+/** 根据前后两份状态，播放发牌 / 筹码 / 摊牌动画 */
+function runFx(prev, next) {
+  if (!prev || !next) return;
+  const potNode = $('pot');
+
+  // 1. 新的一手：荷官给每个人发两张底牌
+  if (next.phase === 'betting' && next.handNo !== prev.handNo) {
+    dealerDeal();
+    const order = dealOrder(next);
+    let t = 130;
+    for (let round = 0; round < 2; round++) {
+      for (const idx of order) {
+        const node = seatNodeOf(idx);
+        const target = node ? node.querySelector('.hole') || node : null;
+        if (target) flyCard(target, { delay: t, duration: 360 });
+        t += 75;
+      }
+    }
+  }
+
+  // 2. 公共牌：从荷官飞到桌面
+  if (next.handNo === prev.handNo && next.board.length > prev.board.length) {
+    dealerDeal();
+    const slots = document.querySelectorAll('#board .pcard');
+    const added = next.board.length - prev.board.length;
+    for (let k = 0; k < added; k++) {
+      const i = prev.board.length + k;
+      const slot = slots[i];
+      if (slot) flyCard(slot, { face: next.board[i], delay: 90 + k * 160, duration: 420 });
+    }
+  }
+
+  // 3. 下注：筹码从座位推到桌面中央
+  let delay = 0;
+  next.seats.forEach((s, i) => {
+    if (!s) return;
+    const before = prev.seats[i] ? prev.seats[i].bet || 0 : 0;
+    const delta = (s.bet || 0) - before;
+    if (delta > 0) {
+      pushChips(seatNodeOf(i), potNode, delta, { delay });
+      delay += 70;
+    }
+  });
+
+  // 4. 摊牌：翻牌 + 底池筹码飞给赢家
+  if (prev.phase !== 'showdown' && next.phase === 'showdown') {
+    revealTableCards(next, prev.phase);
+    const awards = (next.results && next.results.awards) || [];
+    if (awards.length && awards[0].seat >= 0) {
+      const winner = seatNodeOf(awards[0].seat);
+      setTimeout(() => collectChips(potNode, winner, awards[0].amount), 520);
+    }
+  }
+}
+
 /* ---------------- 网络事件 ---------------- */
 
 function initNet() {
@@ -1072,6 +1152,7 @@ function initNet() {
   });
 
   net.on('state', (payload) => {
+    const prev = S.view;
     S.room = payload.room;
     S.view = payload.table;
     S.me = payload.you;
@@ -1091,6 +1172,7 @@ function initNet() {
       closeSheets();
     }
     renderTable();
+    runFx(prev, S.view);
     // 对局记录面板开着时，每手结束后自动刷新
     if ($('sheet-history').classList.contains('is-open')) net.requestHistory();
   });
@@ -1217,8 +1299,8 @@ function boot() {
   if (location.hash === '#create') showScreen('create');
 
   net.connect();
-  // 调试用：控制台里可以 __dezhou.audio.setMusic(false) 之类
-  window.__dezhou = { audio, state: S, net };
+  // 调试用：控制台里可以 __dezhou.audio.setMusic(false)、__dezhou.fx.flyCard(el) 之类
+  window.__dezhou = { audio, state: S, net, fx: { flyCard, pushChips, collectChips, dealerDeal } };
   setInterval(updateTurnBar, 200);
   setInterval(() => {
     if (S.screen === 'table' && S.view && S.view.you && S.view.you.isTurn) {

@@ -166,6 +166,59 @@
 
   <div class="turn-bar"><i id="turn-fill"></i></div>
 
+  <div class="dealer-area">
+    <div class="dealer" id="dealer" aria-hidden="true">
+      <svg viewBox="0 0 140 122" class="dealer-svg">
+        <defs>
+          <linearGradient id="dlVest" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1d3a30" />
+            <stop offset="1" stop-color="#0a1a14" />
+          </linearGradient>
+          <linearGradient id="dlHair" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4a2f20" />
+            <stop offset="1" stop-color="#20130c" />
+          </linearGradient>
+        </defs>
+        <!-- 肩膀/马甲 -->
+        <path d="M28 122c0-27 19-39 42-39s42 12 42 39z" fill="url(#dlVest)" stroke="#2f5c4a" stroke-width="1.6" />
+        <!-- 白衬衫 -->
+        <path d="M57 84l13 21 13-21-13-6z" fill="#f4efe4" />
+        <!-- 领结 -->
+        <path d="M55 88l11 6-11 6zM85 88l-11 6 11 6z" fill="#e8c479" />
+        <circle cx="70" cy="94" r="3.4" fill="#c8a055" />
+        <!-- 脖子 -->
+        <path d="M62 72h16v11a8 8 0 0 1-16 0z" fill="#e6b598" />
+        <!-- 头发（后） -->
+        <path d="M45 41c0-17 11-27 25-27s25 10 25 27c0 7-2 11-4 13l-4-23-17-7-17 7-4 23c-2-2-4-6-4-13z" fill="url(#dlHair)" />
+        <!-- 脸 -->
+        <path d="M51 33c0-11 8-19 19-19s19 8 19 19v11c0 12-8 20-19 20s-19-8-19-20z" fill="#f8dcc4" />
+        <!-- 刘海 -->
+        <path d="M49 34c2-13 10-19 21-19s19 6 21 19c-6-7-12-10-21-10s-15 3-21 10z" fill="url(#dlHair)" />
+        <!-- 眼睛 -->
+        <ellipse cx="62" cy="37" rx="2.6" ry="3.5" fill="#2b1d16" />
+        <ellipse cx="78" cy="37" rx="2.6" ry="3.5" fill="#2b1d16" />
+        <circle cx="62.9" cy="36" r="0.9" fill="#fff" opacity=".85" />
+        <circle cx="78.9" cy="36" r="0.9" fill="#fff" opacity=".85" />
+        <!-- 腮红 -->
+        <ellipse cx="56" cy="45" rx="3.6" ry="2.3" fill="#f0a48f" opacity=".5" />
+        <ellipse cx="84" cy="45" rx="3.6" ry="2.3" fill="#f0a48f" opacity=".5" />
+        <!-- 嘴 -->
+        <path d="M66 47c2 2.6 6 2.6 8 0" stroke="#b5544a" stroke-width="2" fill="none" stroke-linecap="round" />
+        <!-- 耳环 -->
+        <circle cx="48" cy="43" r="2" fill="#e8c479" />
+        <circle cx="92" cy="43" r="2" fill="#e8c479" />
+        <!-- 伸出的手臂与牌 -->
+        <g class="dealer-arm">
+          <path d="M99 101c9-4 17-10 21-17" stroke="#132a22" stroke-width="9" fill="none" stroke-linecap="round" />
+          <g class="dealer-card">
+            <rect x="110" y="72" width="17" height="23" rx="2.5" fill="#fff" transform="rotate(-14 118 83)" />
+            <rect x="113" y="76" width="11" height="15" rx="1.5" fill="#d6413b" opacity=".8" transform="rotate(-14 118 83)" />
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+
   <div class="felt" id="felt">
     <div class="felt-ring"></div>
     <div class="pot-chip" id="pot">底池 0</div>
