@@ -5,7 +5,8 @@
 
 import { RANK_NAME, SUIT_SYMBOL } from '/shared/cards.mjs';
 
-const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+export const reduceMotion = reducedMotion;
 
 const rect = (el) => (el ? el.getBoundingClientRect() : null);
 

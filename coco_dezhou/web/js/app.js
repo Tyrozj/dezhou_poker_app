@@ -5,7 +5,7 @@
 
 import { Net } from './net.js';
 import { audio, TRACKS } from './audio.js';
-import { flyCard, pushChips, collectChips, revealTableCards, dealerDeal } from './fx.js';
+import { flyCard, pushChips, collectChips, revealTableCards, dealerDeal, reduceMotion } from './fx.js';
 import { evaluate, RANK_NAME, SUIT_SYMBOL } from '/shared/cards.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -30,6 +30,7 @@ const S = {
   histOpen: new Set(),
   logSeq: 0,
   wasMyTurn: false,
+  boardDealFrom: -1,
   chat: [],
   chatUnread: 0,
 };
@@ -312,7 +313,9 @@ function renderBoard(v) {
   for (let i = 0; i < 5; i++) {
     if (cards[i]) {
       const c = cardEl(cards[i]);
-      if (i >= S.boardCount) c.classList.add('anim');
+      // 正在"发牌中"的牌先扣着，等飞到位再翻开
+      if (S.boardDealFrom >= 0 && i >= S.boardDealFrom) c.classList.add('pending');
+      else if (i >= S.boardCount) c.classList.add('anim');
       board.appendChild(c);
     } else {
       board.appendChild(slotEl());
@@ -1104,20 +1107,25 @@ function runFx(prev, next) {
     }
   }
 
-  // 2. 公共牌：翻牌三张一起发，转牌 / 河牌再一张一张来
-  if (next.handNo === prev.handNo && next.board.length > prev.board.length) {
+  // 2. 公共牌：一张一张飞到桌面，落地后再翻面亮牌（等上一张翻完才发下一张）
+  if (S.boardDealFrom >= 0) {
     dealerDeal();
     const slots = document.querySelectorAll('#board .pcard');
-    const from = prev.board.length;
-    const to = next.board.length;
-    let t = 120;
-    for (let i = from; i < to; i++) {
-      const isFlop = i < 3;
-      if (i > from && !isFlop) t += 240; // 转牌/河牌之前停一下
+    let t = 160;
+    for (let i = S.boardDealFrom; i < next.board.length; i++) {
       const slot = slots[i];
-      if (slot) flyCard(slot, { face: next.board[i], delay: t, duration: 420 });
-      t += isFlop ? 150 : 320;
+      if (!slot) continue;
+      const flyAt = t;
+      const landAt = flyAt + 400;
+      setTimeout(() => flyCard(slot, { face: next.board[i], duration: 400 }), flyAt);
+      setTimeout(() => {
+        slot.classList.remove('pending');
+        slot.classList.add('flip-in');
+        audio.play('deal');
+      }, landAt + 20);
+      t = landAt + 330; // 翻完停一下，再发下一张
     }
+    S.boardDealFrom = -1;
   }
 
   // 3. 跟注/加注：筹码先堆在自己面前（落在自己的注额上）
@@ -1299,6 +1307,9 @@ function initNet() {
       showScreen('table');
       closeSheets();
     }
+    // 新出现的公共牌需要"飞过去 + 翻开"的动画（先扣着，落地再翻）
+    const boardAdded = prev && prev.handNo === S.view.handNo && S.view.board.length > prev.board.length;
+    S.boardDealFrom = boardAdded && !reduceMotion ? prev.board.length : -1;
     renderTable();
     runFx(prev, S.view);
     // 对局记录面板开着时，每手结束后自动刷新

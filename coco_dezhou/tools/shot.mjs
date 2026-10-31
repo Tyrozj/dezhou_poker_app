@@ -110,7 +110,7 @@ async function openPage() {
   return { cdp, ws, id: target.id };
 }
 
-async function shoot({ name, url, waitMs = 1500, clickSel = '', afterClickMs = 450, preEval = '', waitForSel = '', waitForMs = 30000 }) {
+async function shoot({ name, url, waitMs = 1500, clickSel = '', afterClickMs = 450, preEval = '', waitForSel = '', waitForMs = 30000, afterWaitMs = 350 }) {
   const cdp = sharedCdp;
   await cdp('Page.navigate', { url });
   await sleep(waitMs);
@@ -134,7 +134,7 @@ async function shoot({ name, url, waitMs = 1500, clickSel = '', afterClickMs = 4
       await sleep(250);
     }
     console.log(`  ${name}: 等待 ${waitForSel} -> ${hit ? '出现' : '超时'}`);
-    await sleep(350);
+    await sleep(afterWaitMs);
   }
 
   if (clickSel) {
@@ -179,6 +179,7 @@ try {
       preEval: AUTOPLAY,
       waitForSel: '.win-badge',
       waitForMs: 90000,
+      afterWaitMs: 1800,
     });
     await shoot({
       name: 'allin',
