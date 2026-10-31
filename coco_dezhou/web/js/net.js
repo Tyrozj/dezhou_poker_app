@@ -146,6 +146,12 @@ export class Net {
       case 'history':
         this.emit('history', msg);
         break;
+      case 'chat':
+        this.emit('chat', msg.list || []);
+        break;
+      case 'chatMsg':
+        this.emit('chatMsg', msg.message || null);
+        break;
       case 'error':
         this.emit('error', msg);
         break;
@@ -200,5 +206,6 @@ export class Net {
   sitOut(value) { this.send({ t: 'sitout', value }); }
   kick(playerId) { this.send({ t: 'kick', playerId }); }
   chat(text) { this.send({ t: 'chat', text }); }
+  requestChat() { this.send({ t: 'chatHistory' }); }
   requestHistory() { this.send({ t: 'history' }); }
 }

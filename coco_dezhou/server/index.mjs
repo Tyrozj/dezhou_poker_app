@@ -182,6 +182,14 @@ async function handleApi(req, res, url) {
     return json(res, 200, { code: room.code, ...room.table.handHistory(50) });
   }
 
+  // GET /api/rooms/:code/chat  房间聊天记录
+  if (parts[1] === 'rooms' && parts[2] && parts[3] === 'chat' && method === 'GET') {
+    const room = manager.get(parts[2]);
+    if (!room) return json(res, 404, { error: '房间不存在' });
+    const n = Math.min(200, Math.max(1, Number(url.searchParams.get('n') || 100)));
+    return json(res, 200, { code: room.code, messages: room.chatList(n) });
+  }
+
   // GET /api/hands  战绩表
   if (parts[1] === 'hands') {
     const n = Math.min(200, Math.max(1, Number(url.searchParams.get('n') || 30)));

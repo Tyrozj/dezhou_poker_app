@@ -31,6 +31,8 @@ const S = {
   histOpen: new Set(),
   logSeq: 0,
   wasMyTurn: false,
+  chat: [],
+  chatUnread: 0,
 };
 
 const LS_NICK = 'dz.nick';
@@ -767,6 +769,10 @@ function openSheet(id) {
   if (id === 'sheet-menu') renderMenu();
   if (id === 'sheet-log') renderLogSheet();
   if (id === 'sheet-music') renderMusicList();
+  if (id === 'sheet-chat') {
+    renderChat(true);
+    updateChatBadge();
+  }
   if (id === 'sheet-history') {
     renderHistory();
     net.requestHistory();
@@ -1196,6 +1202,74 @@ function runFx(prev, next) {
   }
 }
 
+/* ---------------- 房间聊天 ---------------- */
+
+function updateChatBadge() {
+  const badge = $('chat-badge');
+  if (!badge) return;
+  if (S.chatUnread > 0) {
+    badge.hidden = false;
+    badge.textContent = S.chatUnread > 99 ? '99+' : String(S.chatUnread);
+  } else {
+    badge.hidden = true;
+  }
+}
+
+function renderChat(forceScroll = false) {
+  const list = $('chat-list');
+  if (!list) return;
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  list.innerHTML = '';
+  if (!S.chat.length) {
+    list.appendChild(el('div', 'chat-empty', '还没有消息，打个招呼吧'));
+    return;
+  }
+  for (const m of S.chat) {
+    if (m.t === 'sys') {
+      list.appendChild(el('div', 'chat-sys', escapeHtml(m.text)));
+      continue;
+    }
+    const mine = S.me && m.pid && m.pid === S.me.id;
+    const node = el('div', 'chat-msg' + (mine ? ' mine' : ''));
+    node.innerHTML = `<div class="cm-meta">${mine ? '' : escapeHtml(m.name) + ' · '}${clockOf(m.at)}</div>
+      <div class="cm-body">${escapeHtml(m.text)}</div>`;
+    list.appendChild(node);
+  }
+  if (forceScroll || nearBottom) list.scrollTop = list.scrollHeight;
+}
+
+function sendChat() {
+  const input = $('chat-input');
+  const text = (input.value || '').trim();
+  if (!text) return;
+  net.chat(text);
+  input.value = '';
+  audio.play('click');
+}
+
+function initChat() {
+  $('btn-chat').addEventListener('click', () => {
+    closeSheets();
+    openSheet('sheet-chat');
+    S.chatUnread = 0;
+    updateChatBadge();
+    renderChat(true);
+    net.requestChat();
+  });
+
+  $('btn-chat-send').addEventListener('click', sendChat);
+  $('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendChat();
+    }
+  });
+  // 手机键盘弹出时把输入框顶进可视区
+  $('chat-input').addEventListener('focus', () => {
+    setTimeout(() => $('chat-input').scrollIntoView({ block: 'center', behavior: 'smooth' }), 260);
+  });
+}
+
 /* ---------------- 网络事件 ---------------- */
 
 function initNet() {
@@ -1220,6 +1294,30 @@ function initNet() {
     if ($('sheet-history').classList.contains('is-open')) renderHistory();
   });
 
+  net.on('chat', (list) => {
+    S.chat = Array.isArray(list) ? list.slice(-200) : [];
+    if ($('sheet-chat').classList.contains('is-open')) {
+      renderChat(true);
+      S.chatUnread = 0;
+      updateChatBadge();
+    }
+  });
+
+  net.on('chatMsg', (m) => {
+    if (!m) return;
+    S.chat.push(m);
+    if (S.chat.length > 200) S.chat.splice(0, S.chat.length - 200);
+    const open = $('sheet-chat').classList.contains('is-open');
+    if (open) {
+      renderChat();
+      S.chatUnread = 0;
+    } else if (!S.me || m.pid !== S.me.id) {
+      S.chatUnread += 1;
+      audio.play('msg');
+    }
+    updateChatBadge();
+  });
+
   net.on('room', (msg) => {
     localStorage.setItem(LS_SESS, JSON.stringify({ code: msg.code, token: msg.token }));
   });
@@ -1229,7 +1327,6 @@ function initNet() {
     S.room = payload.room;
     S.view = payload.table;
     S.me = payload.you;
-    S.chat = payload.chat || [];
     S.skew = (payload.serverTime || Date.now()) - Date.now();
     if (payload.you && payload.room) {
       localStorage.setItem(LS_SESS, JSON.stringify({ code: payload.room.code, token: payload.you.token }));
@@ -1263,6 +1360,9 @@ function initNet() {
     localStorage.removeItem(LS_SESS);
     S.room = null;
     S.view = null;
+    S.chat = [];
+    S.chatUnread = 0;
+    updateChatBadge();
     closeSheets();
     showScreen('home');
     toast('已离开房间');
@@ -1272,6 +1372,9 @@ function initNet() {
     localStorage.removeItem(LS_SESS);
     S.room = null;
     S.view = null;
+    S.chat = [];
+    S.chatUnread = 0;
+    updateChatBadge();
     closeSheets();
     showScreen('home');
     toast(msg.reason || '房间已关闭');
@@ -1336,6 +1439,7 @@ function boot() {
   initLobby();
   initCreate();
   initTable();
+  initChat();
   initAudio();
   initNet();
 

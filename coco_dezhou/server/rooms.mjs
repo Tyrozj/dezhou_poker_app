@@ -16,6 +16,7 @@ import { randomInt } from '../shared/cards.mjs';
 const OFFLINE_REMOVE_MS = 120000; // 掉线多久后释放座位
 const NEXT_HAND_DELAY_MS = 7000;  // 摊牌结果展示时长，之后自动开下一手
 const FIRST_HAND_DELAY_MS = 4000; // 人齐后自动开局等待
+const CHAT_HISTORY_MAX = 200;     // 聊天记录保留条数
 
 let idSeq = 0;
 
@@ -41,6 +42,11 @@ export class Room extends EventEmitter {
       onChange: (reason) => this.onTableChange(reason),
     });
     this.persist();
+  }
+
+  /** 聊天记录（含进出房系统消息），供 REST 查询 */
+  chatList(limit = CHAT_HISTORY_MAX) {
+    return this.chat.slice(-limit);
   }
 
   /* ------------- 广播与持久化 ------------- */
@@ -127,7 +133,6 @@ export class Room extends EventEmitter {
         ? { id: member.id, name: member.name, token: member.token, seat: member.seat, isHost: member.id === this.hostId }
         : null,
       table,
-      chat: this.chat.slice(-30),
       seq: this.stateSeq || 0,
       serverTime: Date.now(),
     };
@@ -221,6 +226,7 @@ export class Room extends EventEmitter {
     member.removeTimer = null;
     if (member.seat !== null) this.table.setConnected(member.id, true);
     this.send(member, this.statePayload(member));
+    this.send(member, { t: 'chat', list: this.chat });
     this.broadcast();
     this.schedule();
   }
@@ -280,12 +286,19 @@ export class Room extends EventEmitter {
         return r;
       }
       case 'chat': {
-        const text = String(msg.text || '').slice(0, 60).trim();
+        const text = String(msg.text || '').replace(/[\r\n\t]/g, ' ').slice(0, 60).trim();
         if (text) {
-          this.chat.push({ t: 'chat', name: member.name, text, at: Date.now() });
-          if (this.chat.length > 50) this.chat.splice(0, this.chat.length - 50);
-          this.broadcast();
+          const entry = { t: 'chat', name: member.name, pid: member.id, text, at: Date.now() };
+          this.chat.push(entry);
+          if (this.chat.length > CHAT_HISTORY_MAX) {
+            this.chat.splice(0, this.chat.length - CHAT_HISTORY_MAX);
+          }
+          for (const m of this.members.values()) this.send(m, { t: 'chatMsg', message: entry });
         }
+        return { ok: true };
+      }
+      case 'chatHistory': {
+        this.send(member, { t: 'chat', list: this.chat });
         return { ok: true };
       }
       case 'history': {

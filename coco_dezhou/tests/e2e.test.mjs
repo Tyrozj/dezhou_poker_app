@@ -118,6 +118,27 @@ test('三人一桌：创建房间 / 房号加入 / 打到摊牌 / 断线重连',
   assert.deepEqual(joined, ['房主', '阿三', '阿二'].sort());
   console.log('[e2e] 2 三人到齐');
 
+  // 聊天：广播 + 历史 + REST
+  const markChat = host.mark();
+  p2.send({ t: 'chat', text: '大家好，我是阿二' });
+  const chatMsg = await host.waitMsg((m) => m.t === 'chatMsg', 5000, markChat);
+  assert.equal(chatMsg.message.text, '大家好，我是阿二');
+  assert.equal(chatMsg.message.name, '阿二');
+
+  const markChatHist = host.mark();
+  host.send({ t: 'chatHistory' });
+  const chatHist = await host.waitMsg((m) => m.t === 'chat', 5000, markChatHist);
+  assert.ok(
+    chatHist.list.some((x) => x.text === '大家好，我是阿二'),
+    '聊天历史应包含刚发的消息',
+  );
+  const restChat = await (await fetch(`http://127.0.0.1:${PORT}/api/rooms/${code}/chat`)).json();
+  assert.ok(
+    restChat.messages.some((x) => x.text === '大家好，我是阿二'),
+    'REST 也能读到聊天记录',
+  );
+  console.log('[e2e] 2.5 聊天广播与记录正常');
+
   // 房号错误应报错
   const wrong = new Client('错号');
   await wrong.connect();

@@ -193,6 +193,11 @@
   <div class="action-bar" id="action-bar"></div>
 
   <div class="log-strip" id="log-strip">等待玩家…</div>
+
+  <button class="chat-fab" id="btn-chat" aria-label="房间聊天">
+    💬
+    <span class="chat-badge" id="chat-badge" hidden>0</span>
+  </button>
 </section>
 
 <!-- ============ 结果弹层 ============ -->
@@ -228,6 +233,16 @@
     <button class="tab" data-tab="players">玩家账本</button>
   </div>
   <div class="hist-body" id="hist-body"></div>
+</div>
+
+<div class="sheet" id="sheet-chat">
+  <div class="sheet-grab"></div>
+  <h3>房间聊天</h3>
+  <div class="chat-list" id="chat-list"></div>
+  <div class="chat-input-row">
+    <input id="chat-input" class="input" maxlength="60" placeholder="说点什么…" autocomplete="off">
+    <button id="btn-chat-send" class="btn btn-primary">发送</button>
+  </div>
 </div>
 
 <div class="sheet" id="sheet-music">

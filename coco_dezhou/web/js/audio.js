@@ -352,6 +352,10 @@ export class AudioKit {
       case 'join':
         this._tone({ freq: 660, dur: 0.1, type: 'sine', gain: 0.13 });
         break;
+      case 'msg':
+        this._tone({ freq: 720, dur: 0.07, type: 'sine', gain: 0.1 });
+        this._tone({ at: 0.08, freq: 960, dur: 0.09, type: 'sine', gain: 0.08 });
+        break;
       case 'click':
         this._tone({ freq: 520, to: 460, dur: 0.05, type: 'sine', gain: 0.12 });
         break;
