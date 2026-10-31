@@ -855,9 +855,12 @@ input[type=range].raise-range::-webkit-slider-thumb {
   object-fit: contain;
   object-position: 50% 100%;
   display: block;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
   user-select: none;
   -webkit-user-drag: none;
+  /* 图片下沿是胸像的裁切边，用渐变让它融进桌沿 */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 88%, rgba(0, 0, 0, 0) 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 88%, rgba(0, 0, 0, 0) 100%);
 }
 @keyframes dealerIdle {
   0%, 100% { transform: translateY(0) }
